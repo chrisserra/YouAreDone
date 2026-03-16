@@ -22,39 +22,56 @@ final class RaceRepository
         int $year,
         ?int $district = null
     ): ?array {
-        $sql = "
-            SELECT
-                r.*,
-                o.slug AS office_slug,
-                o.name AS office_name
-            FROM races r
-            INNER JOIN offices o
-                ON o.office_id = r.office_id
-            WHERE r.state_slug = :state_slug
-              AND o.slug = :office_slug
-              AND r.election_year = :election_year
-              AND r.status = 'active'
-              AND (
-                    (:district IS NULL AND r.district_type = 'statewide' AND r.district_number = 0)
-                 OR (:district IS NOT NULL AND r.district_type = 'congressional_district' AND r.district_number = :district_exact)
-              )
-            LIMIT 1
-        ";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':state_slug', trim($stateSlug));
-        $stmt->bindValue(':office_slug', trim($officeSlug));
-        $stmt->bindValue(':election_year', $year, PDO::PARAM_INT);
-
         if ($district === null) {
-            $stmt->bindValue(':district', null, PDO::PARAM_NULL);
-            $stmt->bindValue(':district_exact', null, PDO::PARAM_NULL);
-        } else {
-            $stmt->bindValue(':district', $district, PDO::PARAM_INT);
-            $stmt->bindValue(':district_exact', $district, PDO::PARAM_INT);
-        }
+            $sql = "
+                SELECT
+                    r.*,
+                    o.slug AS office_slug,
+                    o.name AS office_name
+                FROM races r
+                INNER JOIN offices o
+                    ON o.office_id = r.office_id
+                WHERE r.state_slug = :state_slug
+                  AND o.slug = :office_slug
+                  AND r.election_year = :election_year
+                  AND r.status = 'active'
+                  AND r.district_type = 'statewide'
+                  AND r.district_number = 0
+                LIMIT 1
+            ";
 
-        $stmt->execute();
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'state_slug' => trim($stateSlug),
+                'office_slug' => trim($officeSlug),
+                'election_year' => $year,
+            ]);
+        } else {
+            $sql = "
+                SELECT
+                    r.*,
+                    o.slug AS office_slug,
+                    o.name AS office_name
+                FROM races r
+                INNER JOIN offices o
+                    ON o.office_id = r.office_id
+                WHERE r.state_slug = :state_slug
+                  AND o.slug = :office_slug
+                  AND r.election_year = :election_year
+                  AND r.status = 'active'
+                  AND r.district_type = 'congressional_district'
+                  AND r.district_number = :district_number
+                LIMIT 1
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'state_slug' => trim($stateSlug),
+                'office_slug' => trim($officeSlug),
+                'election_year' => $year,
+                'district_number' => $district,
+            ]);
+        }
 
         $row = $stmt->fetch();
 
@@ -65,7 +82,21 @@ final class RaceRepository
     {
         $sql = "
             SELECT
-                e.*,
+                e.election_id,
+                e.race_id,
+                e.election_type_id,
+                e.election_date,
+                e.round_number,
+                e.title,
+                e.slug,
+                e.status,
+                e.filing_deadline,
+                e.early_voting_start,
+                e.early_voting_end,
+                e.certification_date,
+                e.notes_public,
+                e.created_at,
+                e.updated_at,
                 et.slug AS election_type_slug,
                 et.name AS election_type_name
             FROM elections e
@@ -74,7 +105,8 @@ final class RaceRepository
             WHERE e.race_id = :race_id
             ORDER BY
                 e.election_date ASC,
-                e.round_number ASC
+                e.round_number ASC,
+                e.election_id ASC
         ";
 
         $stmt = $this->db->prepare($sql);
@@ -105,11 +137,23 @@ final class RaceRepository
                 ec.notes_public,
                 c.full_name,
                 c.slug,
+                c.first_name,
+                c.middle_name,
+                c.last_name,
+                c.suffix,
+                c.preferred_name,
                 c.party_code,
                 c.party_name,
+                c.website_url,
+                c.ballotpedia_url,
+                c.wikipedia_url,
+                c.x_url,
+                c.instagram_url,
+                c.facebook_url,
+                c.youtube_url,
+                c.image_url,
                 c.short_bio,
                 c.summary_public,
-                c.image_url,
                 c.score_total,
                 c.green_flag_count,
                 c.red_flag_count
@@ -119,9 +163,14 @@ final class RaceRepository
             WHERE ec.election_id = :election_id
               AND c.status = 'active'
             ORDER BY
-                ec.sort_order ASC,
                 c.score_total DESC,
-                c.full_name ASC
+                c.green_flag_count DESC,
+                c.red_flag_count ASC,
+                ec.is_incumbent DESC,
+                ec.is_major_candidate DESC,
+                ec.sort_order ASC,
+                c.full_name ASC,
+                c.candidate_id ASC
         ";
 
         $stmt = $this->db->prepare($sql);

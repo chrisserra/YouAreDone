@@ -17,6 +17,13 @@ final class RaceController
 
     public function show(string $stateSlug, string $officeSlug, int $year, ?int $district = null): void
     {
+        error_log('RaceController::show reached: ' . json_encode([
+                'stateSlug' => $stateSlug,
+                'officeSlug' => $officeSlug,
+                'year' => $year,
+                'district' => $district,
+            ]));
+
         $data = $this->raceRepository->getRacePage(
             $stateSlug,
             $officeSlug,
@@ -24,8 +31,14 @@ final class RaceController
             $district
         );
 
+        error_log('RaceController::show result: ' . json_encode([
+                'hasData' => (bool)$data,
+                'hasRace' => !empty($data['race']),
+            ]));
+
         if (!$data || empty($data['race'])) {
             not_found($_SERVER['REQUEST_URI'] ?? '/');
+            return;
         }
 
         $race = $data['race'];
@@ -48,7 +61,7 @@ final class RaceController
             isset($race['election_year']) ? (string)$race['election_year'] : '',
         ];
 
-        if ($this->hasDistrict($race)) {
+        if (($race['district_type'] ?? '') === 'congressional_district' && (int)($race['district_number'] ?? 0) > 0) {
             $parts[] = 'District ' . (int)$race['district_number'];
         }
 
@@ -63,7 +76,7 @@ final class RaceController
             isset($race['election_year']) ? (string)$race['election_year'] : '',
         ];
 
-        if ($this->hasDistrict($race)) {
+        if (($race['district_type'] ?? '') === 'congressional_district' && (int)($race['district_number'] ?? 0) > 0) {
             $parts[] = 'District ' . (int)$race['district_number'];
         }
 
@@ -79,16 +92,10 @@ final class RaceController
             . '/'
             . rawurlencode((string)($race['election_year'] ?? ''));
 
-        if ($this->hasDistrict($race)) {
+        if (($race['district_type'] ?? '') === 'congressional_district' && (int)($race['district_number'] ?? 0) > 0) {
             $path .= '/district-' . (int)$race['district_number'];
         }
 
         return absolute_url($path);
-    }
-
-    private function hasDistrict(array $race): bool
-    {
-        return ($race['district_type'] ?? '') === 'congressional_district'
-            && (int)($race['district_number'] ?? 0) > 0;
     }
 }

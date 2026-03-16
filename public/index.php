@@ -37,7 +37,7 @@ $router->get('/candidate/{slug:[a-z0-9-]+}', static function (array $params): vo
     (new CandidateController())->show($slug);
 });
 
-$router->get('/races/{stateSlug:[a-z0-9-]+}/{officeSlug:[a-z0-9-]+}/{year:\d{4}}', static function (array $params): void {
+$router->get('/races/{stateSlug:[a-z0-9-]+}/{officeSlug:[a-z0-9-]+}/{year:[0-9][0-9][0-9][0-9]}', static function (array $params): void {
     $stateSlug = trim((string)($params['stateSlug'] ?? ''));
     $officeSlug = trim((string)($params['officeSlug'] ?? ''));
     $year = (int)($params['year'] ?? 0);
@@ -50,7 +50,7 @@ $router->get('/races/{stateSlug:[a-z0-9-]+}/{officeSlug:[a-z0-9-]+}/{year:\d{4}}
     (new RaceController())->show($stateSlug, $officeSlug, $year, null);
 });
 
-$router->get('/races/{stateSlug:[a-z0-9-]+}/{officeSlug:[a-z0-9-]+}/{year:\d{4}}/district-{district:\d+}', static function (array $params): void {
+$router->get('/races/{stateSlug:[a-z0-9-]+}/{officeSlug:[a-z0-9-]+}/{year:[0-9][0-9][0-9][0-9]}/district-{district:\d+}', static function (array $params): void {
     $stateSlug = trim((string)($params['stateSlug'] ?? ''));
     $officeSlug = trim((string)($params['officeSlug'] ?? ''));
     $year = (int)($params['year'] ?? 0);
