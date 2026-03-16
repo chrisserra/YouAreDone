@@ -39,9 +39,12 @@ if [ -z "$DUMP_USER" ]; then
   exit 1
 fi
 
-echo "Opening SSH tunnel..."
-
-ssh -i "$SSH_KEY" -f -N -L ${LOCAL_PORT}:127.0.0.1:${REMOTE_PORT} "$SSH_HOST" || true
+if lsof -i TCP:${LOCAL_PORT} >/dev/null 2>&1; then
+  echo "SSH tunnel already active on port ${LOCAL_PORT}, reusing it..."
+else
+  echo "Opening SSH tunnel..."
+  ssh -i "$SSH_KEY" -f -N -L ${LOCAL_PORT}:127.0.0.1:${REMOTE_PORT} "$SSH_HOST"
+fi
 
 echo "Exporting database snapshot..."
 
