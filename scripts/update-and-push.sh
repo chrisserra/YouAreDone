@@ -6,35 +6,31 @@ cd "$REPO_DIR"
 
 echo "==> Working in: $REPO_DIR"
 
-# Export latest DB snapshot if your helper script exists
-if [ -f "./scripts/export-current-data.sh" ]; then
+if [ -x "./scripts/export-current-data.sh" ]; then
   echo "==> Exporting current data snapshot..."
   ./scripts/export-current-data.sh
 else
-  echo "==> Skipping export-current-data.sh (not found)"
+  echo "==> Skipping export-current-data.sh (missing or not executable)"
 fi
 
-# Show changed files
 echo "==> Git status before add:"
 git status --short
 
-# Add modified files
 echo "==> Staging changes..."
 git add .
 
-# Stop if nothing changed
 if git diff --cached --quiet; then
   echo "==> No changes to commit."
   exit 0
 fi
 
-# Commit message: use first argument if provided, otherwise timestamp
-COMMIT_MESSAGE="${1:-update repo $(date '+%Y-%m-%d %H:%M:%S')}"
+COMMIT_MESSAGE="${1:-update snapshot $(date '+%Y-%m-%d %H:%M:%S')}"
 
 echo "==> Committing with message: $COMMIT_MESSAGE"
 git commit -m "$COMMIT_MESSAGE"
 
-echo "==> Pushing to current branch..."
-git push
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+echo "==> Pushing to branch: $CURRENT_BRANCH"
+git push origin "$CURRENT_BRANCH"
 
 echo "==> Done."
