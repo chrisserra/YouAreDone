@@ -26,7 +26,6 @@ final class RaceController
 
         if (!$data || empty($data['race'])) {
             not_found($_SERVER['REQUEST_URI'] ?? '/');
-            return;
         }
 
         $race = $data['race'];

@@ -15,7 +15,11 @@ if (!function_exists('h')) {
 if (!function_exists('format_race_title')) {
     function format_race_title(array $race): string
     {
-        $title = trim(($race['state_name'] ?? '') . ' ' . ($race['office_name'] ?? '') . ' ' . ($race['election_year'] ?? ''));
+        $title = trim(
+            (string)($race['state_name'] ?? '') . ' ' .
+            (string)($race['office_name'] ?? '') . ' ' .
+            (string)($race['election_year'] ?? '')
+        );
 
         if (
             ($race['district_type'] ?? '') === 'congressional_district' &&
@@ -40,6 +44,7 @@ if (!function_exists('format_election_date')) {
         }
 
         $ts = strtotime($date);
+
         return $ts ? date('F j, Y', $ts) : '';
     }
 }
@@ -47,7 +52,10 @@ if (!function_exists('format_election_date')) {
 if (!function_exists('candidate_display_name')) {
     function candidate_display_name(array $candidate): string
     {
-        return trim((string)($candidate['ballot_name'] ?: $candidate['full_name'] ?? ''));
+        $ballotName = trim((string)($candidate['ballot_name'] ?? ''));
+        $fullName = trim((string)($candidate['full_name'] ?? ''));
+
+        return $ballotName !== '' ? $ballotName : $fullName;
     }
 }
 
@@ -68,6 +76,27 @@ if (!function_exists('score_class')) {
     }
 }
 
+if (!function_exists('race_path')) {
+    function race_path(array $race): string
+    {
+        $path = '/races/'
+            . rawurlencode((string)($race['state_slug'] ?? ''))
+            . '/'
+            . rawurlencode((string)($race['office_slug'] ?? ''))
+            . '/'
+            . rawurlencode((string)($race['election_year'] ?? ''));
+
+        if (
+            ($race['district_type'] ?? '') === 'congressional_district' &&
+            (int)($race['district_number'] ?? 0) > 0
+        ) {
+            $path .= '/district-' . (int)$race['district_number'];
+        }
+
+        return $path;
+    }
+}
+
 $raceTitle = format_race_title($race);
 ?>
 
@@ -77,15 +106,33 @@ $raceTitle = format_race_title($race);
         <h1><?= h($raceTitle) ?></h1>
 
         <?php if (!empty($race['notes_public'])): ?>
-            <p class="race-hero__notes"><?= nl2br(h($race['notes_public'])) ?></p>
+            <p class="race-hero__notes"><?= nl2br(h((string)$race['notes_public'])) ?></p>
         <?php endif; ?>
 
         <div class="race-meta">
-            <span class="badge"><?= h((string)($race['office_name'] ?? '')) ?></span>
-            <span class="badge"><?= h((string)($race['state_code'] ?? '')) ?></span>
+            <?php if (!empty($race['office_name'])): ?>
+                <span class="badge"><?= h((string)$race['office_name']) ?></span>
+            <?php endif; ?>
+
+            <?php if (!empty($race['state_code'])): ?>
+                <span class="badge"><?= h((string)$race['state_code']) ?></span>
+            <?php endif; ?>
+
             <span class="badge"><?= h((string)($race['status'] ?? 'active')) ?></span>
+
             <?php if (!empty($race['seat_label'])): ?>
                 <span class="badge"><?= h((string)$race['seat_label']) ?></span>
+            <?php endif; ?>
+
+            <?php if (
+                ($race['district_type'] ?? '') === 'congressional_district' &&
+                (int)($race['district_number'] ?? 0) > 0
+            ): ?>
+                <span class="badge">District <?= (int)$race['district_number'] ?></span>
+            <?php endif; ?>
+
+            <?php if (!empty($race['is_special'])): ?>
+                <span class="badge">Special</span>
             <?php endif; ?>
         </div>
     </div>
@@ -106,7 +153,7 @@ $raceTitle = format_race_title($race);
 
                     <div class="election-section__meta">
                         <?php if (!empty($election['election_date'])): ?>
-                            <span class="badge"><?= h(format_election_date($election['election_date'])) ?></span>
+                            <span class="badge"><?= h(format_election_date((string)$election['election_date'])) ?></span>
                         <?php endif; ?>
 
                         <?php if (!empty($election['status'])): ?>
@@ -119,6 +166,10 @@ $raceTitle = format_race_title($race);
                     </div>
                 </div>
 
+                <?php if (!empty($election['notes_public'])): ?>
+                    <p class="election-section__notes"><?= nl2br(h((string)$election['notes_public'])) ?></p>
+                <?php endif; ?>
+
                 <?php if (empty($election['candidates'])): ?>
                     <div class="empty-state">
                         <p>No candidates attached to this election yet.</p>
@@ -126,6 +177,16 @@ $raceTitle = format_race_title($race);
                 <?php else: ?>
                     <div class="candidate-list">
                         <?php foreach ($election['candidates'] as $index => $candidate): ?>
+                            <?php
+                            $candidateSlug = (string)($candidate['slug'] ?? '');
+                            $partyLabel = '';
+
+                            if (!empty($candidate['ballot_party_code'])) {
+                                $partyLabel = (string)$candidate['ballot_party_code'];
+                            } elseif (!empty($candidate['party_code'])) {
+                                $partyLabel = (string)$candidate['party_code'];
+                            }
+                            ?>
                             <article class="candidate-card">
                                 <div class="candidate-card__main">
                                     <div class="candidate-card__rank">
@@ -134,16 +195,18 @@ $raceTitle = format_race_title($race);
 
                                     <div class="candidate-card__content">
                                         <h3 class="candidate-card__name">
-                                            <a href="/candidate/<?= h((string)$candidate['slug']) ?>">
+                                            <?php if ($candidateSlug !== ''): ?>
+                                                <a href="/candidate/<?= h($candidateSlug) ?>">
+                                                    <?= h(candidate_display_name($candidate)) ?>
+                                                </a>
+                                            <?php else: ?>
                                                 <?= h(candidate_display_name($candidate)) ?>
-                                            </a>
+                                            <?php endif; ?>
                                         </h3>
 
                                         <div class="candidate-card__meta">
-                                            <?php if (!empty($candidate['party_code']) || !empty($candidate['ballot_party'])): ?>
-                                                <span class="badge">
-                                                    <?= h((string)($candidate['ballot_party'] ?: $candidate['party_code'])) ?>
-                                                </span>
+                                            <?php if ($partyLabel !== ''): ?>
+                                                <span class="badge"><?= h($partyLabel) ?></span>
                                             <?php endif; ?>
 
                                             <?php if (!empty($candidate['is_incumbent'])): ?>
@@ -154,10 +217,26 @@ $raceTitle = format_race_title($race);
                                                 <span class="badge">Major Candidate</span>
                                             <?php endif; ?>
 
-                                            <?php if (!empty($candidate['result_status'])): ?>
+                                            <?php if (!empty($candidate['filing_status']) && $candidate['filing_status'] !== 'unknown'): ?>
+                                                <span class="badge"><?= h((string)$candidate['filing_status']) ?></span>
+                                            <?php endif; ?>
+
+                                            <?php if (!empty($candidate['ballot_status']) && $candidate['ballot_status'] !== 'unknown'): ?>
+                                                <span class="badge"><?= h((string)$candidate['ballot_status']) ?></span>
+                                            <?php endif; ?>
+
+                                            <?php if (!empty($candidate['result_status']) && $candidate['result_status'] !== 'unknown'): ?>
                                                 <span class="badge"><?= h((string)$candidate['result_status']) ?></span>
                                             <?php endif; ?>
                                         </div>
+
+                                        <?php if (!empty($candidate['short_bio'])): ?>
+                                            <p class="candidate-card__bio"><?= nl2br(h((string)$candidate['short_bio'])) ?></p>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($candidate['notes_public'])): ?>
+                                            <p class="candidate-card__notes"><?= nl2br(h((string)$candidate['notes_public'])) ?></p>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
 
@@ -183,11 +262,20 @@ $raceTitle = format_race_title($race);
                                         </span>
                                     </div>
 
-                                    <?php if ($candidate['vote_percent'] !== null): ?>
+                                    <?php if (array_key_exists('vote_percent', $candidate) && $candidate['vote_percent'] !== null): ?>
                                         <div class="stat">
                                             <span class="stat__label">Vote %</span>
                                             <span class="stat__value">
                                                 <?= h(number_format((float)$candidate['vote_percent'], 3)) ?>%
+                                            </span>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <?php if (array_key_exists('vote_count', $candidate) && $candidate['vote_count'] !== null): ?>
+                                        <div class="stat">
+                                            <span class="stat__label">Votes</span>
+                                            <span class="stat__value">
+                                                <?= h(number_format((int)$candidate['vote_count'])) ?>
                                             </span>
                                         </div>
                                     <?php endif; ?>
