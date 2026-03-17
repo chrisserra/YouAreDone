@@ -609,4 +609,63 @@ final class CandidateRepository
 
         return trim(implode(' ', $parts));
     }
+
+    public function getCandidatePreviewFlags(int $candidateId, string $flagColor, int $limit = 3): array
+    {
+        $limit = max(1, $limit);
+
+        $sql = "
+        SELECT
+            cf.candidate_flag_id,
+            cf.candidate_id,
+            cf.note,
+            f.flag_id,
+            f.slug AS flag_slug,
+            f.name AS flag_name,
+            f.flag_color,
+            f.default_weight,
+            COALESCE(cf.weight_override, f.default_weight) AS effective_weight
+        FROM candidate_flags cf
+        INNER JOIN flags f
+            ON f.flag_id = cf.flag_id
+        WHERE cf.candidate_id = :candidate_id
+          AND cf.is_active = 1
+          AND f.is_active = 1
+          AND f.flag_color = :flag_color
+        ORDER BY
+            ABS(COALESCE(cf.weight_override, f.default_weight)) DESC,
+            f.sort_order ASC,
+            f.name ASC,
+            cf.candidate_flag_id ASC
+        LIMIT {$limit}
+    ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'candidate_id' => $candidateId,
+            'flag_color' => $flagColor,
+        ]);
+
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['candidate_flag_id'] = (int) ($row['candidate_flag_id'] ?? 0);
+            $row['candidate_id'] = (int) ($row['candidate_id'] ?? 0);
+            $row['flag_id'] = (int) ($row['flag_id'] ?? 0);
+            $row['default_weight'] = (float) ($row['default_weight'] ?? 0);
+            $row['effective_weight'] = (float) ($row['effective_weight'] ?? 0);
+            $row['note'] = trim((string) ($row['note'] ?? ''));
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    public function getCandidatePreviewReasonGroups(int $candidateId): array
+    {
+        return [
+            'green' => $this->getCandidatePreviewFlags($candidateId, 'green', 3),
+            'red' => $this->getCandidatePreviewFlags($candidateId, 'red', 3),
+        ];
+    }
 }

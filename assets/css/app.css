@@ -648,6 +648,66 @@ p {
     color: #eff6ff;
 }
 
+.event-candidate__reasons {
+    margin-top: 14px;
+    display: grid;
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.event-candidate__reason-group {
+    display: grid;
+    gap: 8px;
+}
+
+.event-candidate__reason-heading {
+    margin: 0;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.event-candidate__reason-heading--good {
+    color: #bbf7d0;
+}
+
+.event-candidate__reason-heading--bad {
+    color: #fecaca;
+}
+
+.event-candidate__reason-list {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 6px;
+}
+
+.event-candidate__reason-item {
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.event-candidate__reason-item--good::marker {
+    color: #22c55e;
+}
+
+.event-candidate__reason-item--bad::marker {
+    color: #ef4444;
+}
+
+.event-candidate__reason-name {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.event-candidate__reason-note {
+    display: inline;
+    color: var(--text-soft);
+    margin-left: 6px;
+}
+
 /* =========================
    Browse by Office
 ========================= */
@@ -946,5 +1006,9 @@ p {
 
     .event-candidate__topline {
         gap: 6px;
+    }
+
+    .event-candidate__reasons {
+        gap: 10px;
     }
 }
