@@ -6,6 +6,13 @@ cd "$REPO_DIR"
 
 echo "==> Working in: $REPO_DIR"
 
+if [ -x "./scripts/export-schema.sh" ]; then
+  echo "==> Exporting schema snapshot..."
+  ./scripts/export-schema.sh
+else
+  echo "==> Skipping export-schema.sh (missing or not executable)"
+fi
+
 if [ -x "./scripts/export-current-data.sh" ]; then
   echo "==> Exporting current data snapshot..."
   ./scripts/export-current-data.sh
