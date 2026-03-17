@@ -11,22 +11,6 @@ if (!function_exists('h')) {
     }
 }
 
-if (!function_exists('format_date')) {
-    function format_date(?string $date): string
-    {
-        if (!$date) {
-            return '';
-        }
-
-        $ts = strtotime($date);
-        if (!$ts) {
-            return '';
-        }
-
-        return date('F j, Y', $ts);
-    }
-}
-
 $r = $featuredRace ?? null;
 
 if (!$r) {
@@ -49,7 +33,7 @@ $candidates = is_array($r['candidate_preview'] ?? null) ? $r['candidate_preview'
     <div class="card featured-race__card">
         <div class="featured-race__header">
             <div class="featured-race__eyebrow">
-                <i class="fa-solid fa-star" aria-hidden="true"></i>
+                <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
                 Featured Race
             </div>
 
@@ -78,13 +62,14 @@ $candidates = is_array($r['candidate_preview'] ?? null) ? $r['candidate_preview'
 
                     <?php if (!empty($nextElection['election_date'])): ?>
                         <span class="featured-race__next-date">
-                            <?= h(format_date((string)$nextElection['election_date'])) ?>
+                            <?= h(election_date((string)$nextElection['election_date'])) ?>
                         </span>
                     <?php endif; ?>
                 </div>
 
                 <?php if (!empty($nextElection['candidate_count'])): ?>
                     <div class="featured-race__next-count">
+                        <i class="fa-solid fa-users" aria-hidden="true"></i>
                         <?= number_format((int)$nextElection['candidate_count']) ?>
                         candidate<?= ((int)$nextElection['candidate_count'] === 1 ? '' : 's') ?>
                     </div>

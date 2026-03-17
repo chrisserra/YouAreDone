@@ -9,7 +9,7 @@ declare(strict_types=1);
 /** @var string|null $ogImage */
 
 $pageTitle = $pageTitle ?? 'YouAreDone.org';
-$metaDescription = $metaDescription ?? 'Track upcoming primaries, watched races, and candidate accountability.';
+$metaDescription = $metaDescription ?? 'Track upcoming election events, watched races, and candidate accountability.';
 $canonicalUrl = $canonicalUrl ?? 'https://youaredone.org/';
 $ogImage = $ogImage ?? 'https://youaredone.org/assets/images/og-default.png';
 
@@ -19,6 +19,22 @@ if (!function_exists('h')) {
         return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
     }
 }
+
+$shareUrl = $canonicalUrl;
+$shareTitle = $pageTitle;
+$shareText = $pageTitle . ' - ' . $metaDescription;
+
+$encodedUrl = rawurlencode($shareUrl);
+$encodedTitle = rawurlencode($shareTitle);
+$encodedText = rawurlencode($shareText);
+$emailSubject = rawurlencode($shareTitle);
+$emailBody = rawurlencode($shareText . "\n\n" . $shareUrl);
+
+$facebookShareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' . $encodedUrl;
+$xShareUrl = 'https://twitter.com/intent/tweet?text=' . $encodedText . '&url=' . $encodedUrl;
+$blueskyShareUrl = 'https://bsky.app/intent/compose?text=' . $encodedText . '%20' . $encodedUrl;
+$threadsShareUrl = 'https://www.threads.net/intent/post?text=' . $encodedText . '%20' . $encodedUrl;
+$emailShareUrl = 'mailto:?subject=' . $emailSubject . '&body=' . $emailBody;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -42,23 +58,78 @@ if (!function_exists('h')) {
     <link
             rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-            integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkR4j8tbtPom6jLJXQ/gh1IsQCxwXKkL4pYg=="
+            integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
             crossorigin="anonymous"
             referrerpolicy="no-referrer"
     >
 
-    <link rel="stylesheet" href="/assets/css/app.css?v=3">
+    <link rel="stylesheet" href="/assets/css/app.css?v=5">
 </head>
 <body class="site-body">
 <header class="site-header">
     <div class="site-header__inner">
-        <a href="/" class="site-logo" aria-label="YouAreDone.org home">
-            <img src="/assets/images/youaredone_logo.png?v=3" alt="YouAreDone.org">
-        </a>
+        <div class="site-header__left">
+            <a href="/" class="site-logo" aria-label="YouAreDone.org home">
+                <img src="/assets/images/youaredone_logo.png?v=5" alt="YouAreDone.org">
+            </a>
 
-        <div class="site-header__branding">
-            <div class="site-header__tagline">
-                Election watch and candidate accountability research
+            <div class="site-header__branding">
+                <div class="site-header__tagline">
+                    Track elections. Compare candidates. Hold incumbents accountable.
+                </div>
+            </div>
+        </div>
+
+        <div class="site-header__share">
+            <button
+                    type="button"
+                    class="site-header__share-toggle"
+                    data-share-toggle
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-controls="share-menu"
+            >
+                <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                <span>Share</span>
+                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+
+            <div class="site-header__share-menu" id="share-menu" data-share-menu hidden>
+
+                <button
+                        type="button"
+                        class="site-header__share-item"
+                        data-copy-link="<?= h($shareUrl) ?>"
+                >
+                    <i class="fa-solid fa-link"></i>
+                    <span>Copy Link</span>
+                </button>
+
+                <a href="<?= h($emailShareUrl) ?>" class="site-header__share-item">
+                    <i class="fa-solid fa-envelope"></i>
+                    <span>Email</span>
+                </a>
+
+                <a href="<?= h($facebookShareUrl) ?>" class="site-header__share-item" target="_blank">
+                    <i class="fa-brands fa-facebook"></i>
+                    <span>Facebook</span>
+                </a>
+
+                <a href="<?= h($xShareUrl) ?>" class="site-header__share-item" target="_blank">
+                    <i class="fa-brands fa-x-twitter"></i>
+                    <span>X</span>
+                </a>
+
+                <a href="<?= h($blueskyShareUrl) ?>" class="site-header__share-item" target="_blank">
+                    <i class="fa-solid fa-cloud"></i>
+                    <span>Bluesky</span>
+                </a>
+
+                <a href="<?= h($threadsShareUrl) ?>" class="site-header__share-item" target="_blank">
+                    <i class="fa-brands fa-threads"></i>
+                    <span>Threads</span>
+                </a>
+
             </div>
         </div>
     </div>
@@ -67,5 +138,7 @@ if (!function_exists('h')) {
 <main class="site-main">
     <?= $content ?>
 </main>
+
+<script src="/assets/js/app.js?v=1"></script>
 </body>
 </html>

@@ -84,6 +84,7 @@ final class RaceRepository
             SELECT
                 e.election_id,
                 e.race_id,
+                e.event_id,
                 e.election_type_id,
                 e.election_date,
                 e.round_number,
@@ -202,6 +203,12 @@ final class RaceRepository
             'elections' => array_map(fn (array $row): array => $this->mapElectionRow($row), $elections),
         ];
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Legacy homepage methods (kept temporarily for compatibility)
+    |--------------------------------------------------------------------------
+    */
 
     public function getHomepageNextElection(): ?array
     {
@@ -343,6 +350,279 @@ final class RaceRepository
             fn (array $row): array => $this->mapHomepageElectionCard($row),
             $stmt->fetchAll()
         );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | New homepage event-level methods
+    |--------------------------------------------------------------------------
+    */
+
+    public function getHomepageNextEvents(): array
+    {
+        $nextEventDate = $this->getNextHomepageEventDate();
+
+        if ($nextEventDate === null) {
+            return [];
+        }
+
+        $sql = "
+            SELECT
+                ev.event_id,
+                ev.election_year,
+                ev.state_code,
+                ev.state_name,
+                ev.state_slug,
+                ev.event_type_slug,
+                ev.event_type_name,
+                ev.event_date,
+                ev.title,
+                ev.slug AS event_slug,
+                ev.status,
+                ev.notes_public,
+                COUNT(DISTINCT e.election_id) AS contest_count,
+                COUNT(DISTINCT ec.candidate_id) AS candidate_count
+            FROM events ev
+            INNER JOIN elections e
+                ON e.event_id = ev.event_id
+            INNER JOIN races r
+                ON r.race_id = e.race_id
+               AND r.status = 'active'
+            LEFT JOIN election_candidates ec
+                ON ec.election_id = e.election_id
+            WHERE ev.event_date = :next_event_date
+              AND ev.status IN ('upcoming', 'ongoing')
+            GROUP BY
+                ev.event_id,
+                ev.election_year,
+                ev.state_code,
+                ev.state_name,
+                ev.state_slug,
+                ev.event_type_slug,
+                ev.event_type_name,
+                ev.event_date,
+                ev.title,
+                ev.slug,
+                ev.status,
+                ev.notes_public
+            ORDER BY
+                ev.state_name ASC,
+                ev.title ASC,
+                ev.event_id ASC
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'next_event_date' => $nextEventDate,
+        ]);
+
+        $rows = $stmt->fetchAll();
+
+        $items = array_map(
+            fn (array $row): array => $this->mapHomepageEventCard($row),
+            $rows
+        );
+
+        foreach ($items as &$item) {
+            $item['contest_preview'] = $this->getHomepageEventContestPreview((int)$item['event_id'], 3);
+        }
+        unset($item);
+
+        return $items;
+    }
+
+    public function getHomepageUpcomingEvents(int $limit = 6): array
+    {
+        $limit = max(1, $limit);
+
+        $nextEventDate = $this->getNextHomepageEventDate();
+
+        if ($nextEventDate === null) {
+            return [];
+        }
+
+        $sql = "
+            SELECT
+                ev.event_id,
+                ev.election_year,
+                ev.state_code,
+                ev.state_name,
+                ev.state_slug,
+                ev.event_type_slug,
+                ev.event_type_name,
+                ev.event_date,
+                ev.title,
+                ev.slug AS event_slug,
+                ev.status,
+                ev.notes_public,
+                COUNT(DISTINCT e.election_id) AS contest_count,
+                COUNT(DISTINCT ec.candidate_id) AS candidate_count
+            FROM events ev
+            INNER JOIN elections e
+                ON e.event_id = ev.event_id
+            INNER JOIN races r
+                ON r.race_id = e.race_id
+               AND r.status = 'active'
+            LEFT JOIN election_candidates ec
+                ON ec.election_id = e.election_id
+            WHERE ev.event_date > :next_event_date
+              AND ev.status IN ('upcoming', 'ongoing')
+            GROUP BY
+                ev.event_id,
+                ev.election_year,
+                ev.state_code,
+                ev.state_name,
+                ev.state_slug,
+                ev.event_type_slug,
+                ev.event_type_name,
+                ev.event_date,
+                ev.title,
+                ev.slug,
+                ev.status,
+                ev.notes_public
+            ORDER BY
+                ev.event_date ASC,
+                ev.state_name ASC,
+                ev.title ASC,
+                ev.event_id ASC
+            LIMIT {$limit}
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'next_event_date' => $nextEventDate,
+        ]);
+
+        $rows = $stmt->fetchAll();
+
+        $items = array_map(
+            fn (array $row): array => $this->mapHomepageEventCard($row),
+            $rows
+        );
+
+        foreach ($items as &$item) {
+            $item['contest_preview'] = $this->getHomepageEventContestPreview((int)$item['event_id'], 3);
+        }
+        unset($item);
+
+        return $items;
+    }
+
+    public function getHomepageEventContestPreview(int $eventId, int $limit = 3): array
+    {
+        $limit = max(1, $limit);
+
+        $sql = "
+            SELECT
+                e.election_id,
+                e.event_id,
+                e.race_id,
+                e.title,
+                e.slug AS election_slug,
+                e.election_date,
+                e.status,
+                e.round_number,
+                et.slug AS election_type_slug,
+                et.name AS election_type_name,
+                r.state_code,
+                r.state_name,
+                r.state_slug,
+                r.election_year,
+                r.district_type,
+                r.district_number,
+                r.seat_label,
+                r.notes_public,
+                o.slug AS office_slug,
+                o.name AS office_name,
+                COUNT(ec.election_candidate_id) AS candidate_count
+            FROM elections e
+            INNER JOIN races r
+                ON r.race_id = e.race_id
+               AND r.status = 'active'
+            INNER JOIN offices o
+                ON o.office_id = r.office_id
+            INNER JOIN election_types et
+                ON et.election_type_id = e.election_type_id
+            LEFT JOIN election_candidates ec
+                ON ec.election_id = e.election_id
+            WHERE e.event_id = :event_id
+            GROUP BY
+                e.election_id,
+                e.event_id,
+                e.race_id,
+                e.title,
+                e.slug,
+                e.election_date,
+                e.status,
+                e.round_number,
+                et.slug,
+                et.name,
+                r.state_code,
+                r.state_name,
+                r.state_slug,
+                r.election_year,
+                r.district_type,
+                r.district_number,
+                r.seat_label,
+                r.notes_public,
+                o.slug,
+                o.name
+            ORDER BY
+                candidate_count DESC,
+                e.round_number ASC,
+                o.name ASC,
+                r.district_number ASC,
+                e.title ASC,
+                e.election_id ASC
+            LIMIT {$limit}
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'event_id' => $eventId,
+        ]);
+
+        $rows = $stmt->fetchAll();
+
+        $items = [];
+
+        foreach ($rows as $row) {
+            $districtType = (string)$row['district_type'];
+            $districtNumber = (int)$row['district_number'];
+
+            $items[] = [
+                'election_id' => (int)$row['election_id'],
+                'event_id' => (int)$row['event_id'],
+                'race_id' => (int)$row['race_id'],
+                'title' => (string)$row['title'],
+                'seat_label' => (string)($row['seat_label'] ?? ''),
+                'election_slug' => (string)$row['election_slug'],
+                'election_date' => (string)$row['election_date'],
+                'status' => (string)$row['status'],
+                'round_number' => (int)$row['round_number'],
+                'election_type_slug' => (string)$row['election_type_slug'],
+                'election_type_name' => (string)$row['election_type_name'],
+                'office_name' => (string)$row['office_name'],
+                'office_slug' => (string)$row['office_slug'],
+                'state_code' => (string)$row['state_code'],
+                'state_name' => (string)$row['state_name'],
+                'state_slug' => (string)$row['state_slug'],
+                'election_year' => (int)$row['election_year'],
+                'district_type' => $districtType,
+                'district_number' => $districtNumber,
+                'district_label' => $this->buildDistrictLabel($districtType, $districtNumber),
+                'candidate_count' => (int)$row['candidate_count'],
+                'race_url' => $this->buildRaceUrl(
+                    (string)$row['state_slug'],
+                    (string)$row['office_slug'],
+                    (int)$row['election_year'],
+                    $districtType,
+                    $districtNumber
+                ),
+            ];
+        }
+
+        return $items;
     }
 
     public function getHomepageMostWatchedRaces(int $limit = 4): array
@@ -559,6 +839,25 @@ final class RaceRepository
         return $items;
     }
 
+    private function getNextHomepageEventDate(): ?string
+    {
+        $sql = "
+            SELECT MIN(ev.event_date) AS next_event_date
+            FROM events ev
+            WHERE ev.status IN ('upcoming', 'ongoing')
+              AND ev.event_date >= CURDATE()
+        ";
+
+        $stmt = $this->db->query($sql);
+        $row = $stmt->fetch();
+
+        if (!$row || empty($row['next_event_date'])) {
+            return null;
+        }
+
+        return (string)$row['next_event_date'];
+    }
+
     private function mapRaceRow(array $race): array
     {
         $race['race_url'] = $this->buildRaceUrl(
@@ -614,6 +913,27 @@ final class RaceRepository
                 $districtType,
                 $districtNumber
             ),
+        ];
+    }
+
+    private function mapHomepageEventCard(array $row): array
+    {
+        return [
+            'event_id' => (int)$row['event_id'],
+            'title' => (string)$row['title'],
+            'event_slug' => (string)$row['event_slug'],
+            'event_date' => (string)$row['event_date'],
+            'status' => (string)$row['status'],
+            'event_type_slug' => (string)$row['event_type_slug'],
+            'event_type_name' => (string)$row['event_type_name'],
+            'state_code' => (string)$row['state_code'],
+            'state_name' => (string)$row['state_name'],
+            'state_slug' => (string)$row['state_slug'],
+            'election_year' => (int)$row['election_year'],
+            'contest_count' => (int)$row['contest_count'],
+            'candidate_count' => (int)$row['candidate_count'],
+            'notes_public' => $row['notes_public'] ?? null,
+            'contest_preview' => [],
         ];
     }
 

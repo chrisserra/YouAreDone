@@ -111,3 +111,36 @@ if (!function_exists('h')) {
         return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
     }
 }
+
+/*
+|--------------------------------------------------------------------------
+| Election Date Helper
+|--------------------------------------------------------------------------
+*/
+if (!function_exists('election_date')) {
+    function election_date(?string $date): string
+    {
+        try {
+            if (!$date) {
+                return '';
+            }
+
+            $ts = strtotime($date);
+
+            if ($ts === false) {
+                return '';
+            }
+
+            $today = date('Y-m-d');
+            $value = date('Y-m-d', $ts);
+
+            if ($value === $today) {
+                return 'Today';
+            }
+
+            return date('F j, Y', $ts);
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+}

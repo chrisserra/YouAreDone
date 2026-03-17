@@ -11,22 +11,6 @@ if (!function_exists('h')) {
     }
 }
 
-if (!function_exists('format_date_short')) {
-    function format_date_short(?string $date): string
-    {
-        if (!$date) {
-            return '';
-        }
-
-        $ts = strtotime($date);
-        if (!$ts) {
-            return '';
-        }
-
-        return date('M j, Y', $ts);
-    }
-}
-
 $items = is_array($latestUpdates ?? null) ? $latestUpdates : [];
 
 if (empty($items)) {
@@ -37,7 +21,7 @@ if (empty($items)) {
 <section class="dashboard-section latest-updates">
     <div class="dashboard-section__header">
         <h2 class="dashboard-section__title">
-            <i class="fa-solid fa-newspaper" aria-hidden="true"></i>
+            <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
             Latest Candidate Updates
         </h2>
     </div>
@@ -57,7 +41,8 @@ if (empty($items)) {
             ?>
             <article class="card latest-update-card">
                 <div class="latest-update-card__date">
-                    <?= h(format_date_short($sortDate)) ?>
+                    <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+                    <?= h(election_date($sortDate)) ?>
                 </div>
 
                 <div class="latest-update-card__content">
@@ -95,13 +80,16 @@ if (empty($items)) {
 
                     <?php if ($sourceName !== ''): ?>
                         <div class="latest-update-card__source">
-                            <span class="latest-update-card__source-label">Source:</span>
+                            <span class="latest-update-card__source-label">
+                                <i class="fa-solid fa-link" aria-hidden="true"></i>
+                                Source:
+                            </span>
                             <?php if ($sourceUrl !== ''): ?>
                                 <a
-                                    href="<?= h($sourceUrl) ?>"
-                                    class="latest-update-card__link"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                        href="<?= h($sourceUrl) ?>"
+                                        class="latest-update-card__link"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                 >
                                     <?= h($sourceName) ?>
                                 </a>

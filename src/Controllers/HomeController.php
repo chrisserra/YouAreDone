@@ -23,18 +23,9 @@ final class HomeController
     public function index(): void
     {
         $stats = $this->candidateRepository->getHomepageStats();
-        $nextElection = $this->raceRepository->getHomepageNextElection();
 
-        if ($nextElection !== null && !empty($nextElection['election_id'])) {
-            $nextElection['candidate_preview'] = $this->candidateRepository->getHomepageElectionCandidatePreview(
-                (int)$nextElection['election_id'],
-                3
-            );
-        } else {
-            $nextElection = null;
-        }
-
-        $upcomingElections = $this->raceRepository->getHomepageUpcomingElections(6);
+        $nextEvents = $this->raceRepository->getHomepageNextEvents();
+        $upcomingEvents = $this->raceRepository->getHomepageUpcomingEvents(6);
         $mostWatchedRaces = $this->raceRepository->getHomepageMostWatchedRaces(4);
         $featuredRace = $this->raceRepository->getHomepageFeaturedRace();
 
@@ -54,7 +45,7 @@ final class HomeController
 
         $hero = [
             'title' => 'Election Watch Dashboard',
-            'subtitle' => 'Track upcoming primaries, most watched races, and candidate accountability.',
+            'subtitle' => 'Track upcoming election events, watched races, and candidate accountability.',
             'stats' => [
                 [
                     'label' => 'Active Races',
@@ -100,13 +91,13 @@ final class HomeController
 
         render_view('home/index', [
             'pageTitle' => 'YouAreDone.org',
-            'metaDescription' => 'Track upcoming primaries, watched races, and candidate accountability.',
+            'metaDescription' => 'Track upcoming election events, watched races, and candidate accountability.',
             'canonicalUrl' => absolute_url('/'),
             'ogImage' => absolute_url('/assets/images/og-default.png'),
 
             'hero' => $hero,
-            'nextElection' => $nextElection,
-            'upcomingElections' => $upcomingElections,
+            'nextEvents' => $nextEvents,
+            'upcomingEvents' => $upcomingEvents,
             'mostWatchedRaces' => $mostWatchedRaces,
             'accountabilitySignals' => $accountabilitySignals,
             'featuredRace' => $featuredRace,

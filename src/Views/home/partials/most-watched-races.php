@@ -11,22 +11,6 @@ if (!function_exists('h')) {
     }
 }
 
-if (!function_exists('format_date_short')) {
-    function format_date_short(?string $date): string
-    {
-        if (!$date) {
-            return '';
-        }
-
-        $ts = strtotime($date);
-        if (!$ts) {
-            return '';
-        }
-
-        return date('M j, Y', $ts);
-    }
-}
-
 $items = is_array($mostWatchedRaces ?? null) ? $mostWatchedRaces : [];
 
 if (empty($items)) {
@@ -58,7 +42,7 @@ if (empty($items)) {
             ?>
             <article class="card watched-race-card">
                 <div class="watched-race-card__eyebrow">
-                    <i class="fa-solid fa-landmark" aria-hidden="true"></i>
+                    <i class="fa-solid fa-binoculars" aria-hidden="true"></i>
                     Race Watch
                 </div>
 
@@ -77,18 +61,24 @@ if (empty($items)) {
                 <div class="watched-race-card__meta">
                     <?php if ($nextElectionType !== ''): ?>
                         <div class="watched-race-card__meta-item">
-                            <span class="watched-race-card__meta-label">Next election</span>
+                            <span class="watched-race-card__meta-label">
+                                <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+                                Next election
+                            </span>
                             <span class="watched-race-card__meta-value">
                                 <?= h($nextElectionType) ?>
                                 <?php if ($nextElectionDate !== ''): ?>
-                                    • <?= h(format_date_short($nextElectionDate)) ?>
+                                    • <?= h(election_date($nextElectionDate)) ?>
                                 <?php endif; ?>
                             </span>
                         </div>
                     <?php elseif ($nextElectionDate !== ''): ?>
                         <div class="watched-race-card__meta-item">
-                            <span class="watched-race-card__meta-label">Next election</span>
-                            <span class="watched-race-card__meta-value"><?= h(format_date_short($nextElectionDate)) ?></span>
+                            <span class="watched-race-card__meta-label">
+                                <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+                                Next election
+                            </span>
+                            <span class="watched-race-card__meta-value"><?= h(election_date($nextElectionDate)) ?></span>
                         </div>
                     <?php endif; ?>
 
@@ -99,7 +89,7 @@ if (empty($items)) {
                         </span>
 
                         <span class="watched-race-card__stat">
-                            <i class="fa-solid fa-newspaper" aria-hidden="true"></i>
+                            <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
                             <?= number_format($updateCount) ?> update<?= $updateCount === 1 ? '' : 's' ?>
                         </span>
 
