@@ -4,107 +4,211 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Repositories\CandidateRepository;
-use App\Repositories\RaceRepository;
+use App\Repositories\ElectionRepository;
 
 final class HomeController
 {
-    private RaceRepository $raceRepository;
-    private CandidateRepository $candidateRepository;
+    private ElectionRepository $electionRepository;
 
-    public function __construct(
-        ?RaceRepository $raceRepository = null,
-        ?CandidateRepository $candidateRepository = null
-    ) {
-        $this->raceRepository = $raceRepository ?? new RaceRepository();
-        $this->candidateRepository = $candidateRepository ?? new CandidateRepository();
+    public function __construct(?ElectionRepository $electionRepository = null)
+    {
+        $this->electionRepository = $electionRepository ?? new ElectionRepository();
     }
 
     public function index(): void
     {
-        $stats = $this->candidateRepository->getHomepageStats();
+        $nextElections = $this->normalizeElectionEvents(
+            $this->electionRepository->getNextElectionEvents()
+        );
 
-        $nextEvents = $this->raceRepository->getHomepageNextEvents();
-        $upcomingEvents = $this->raceRepository->getHomepageUpcomingEvents(6);
-        $mostWatchedRaces = $this->raceRepository->getHomepageMostWatchedRaces(4);
-        $featuredRace = $this->raceRepository->getHomepageFeaturedRace();
+        $upcomingElections = $this->normalizeElectionEvents(
+            $this->electionRepository->getUpcomingElectionEvents(12)
+        );
 
-        if ($featuredRace !== null && !empty($featuredRace['race_id'])) {
-            $featuredRace['candidate_preview'] = $this->candidateRepository->getHomepageRaceCandidatePreview(
-                (int)$featuredRace['race_id'],
-                5
-            );
-        } else {
-            $featuredRace = null;
+        $states = $this->normalizeStateRows(
+            $this->electionRepository->getStatesWithNextElection()
+        );
+
+        render_view('home', [
+            'pageTitle' => 'YouAreDone.org',
+            'metaDescription' => 'Track the next elections, upcoming elections, and where to watch next across presidential, U.S. Senate, U.S. House, and governor contests.',
+            'canonicalUrl' => absolute_url('/'),
+            'nextElections' => $nextElections,
+            'upcomingElections' => $upcomingElections,
+            'states' => $states,
+            'browseOffices' => $this->getBrowseOffices(),
+        ]);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeElectionEvents(array $rows): array
+    {
+        $normalized = [];
+
+        foreach ($rows as $row) {
+            $stateName = trim((string) ($row['state_name'] ?? ''));
+            $stateSlug = trim((string) ($row['state_slug'] ?? ''));
+            $electionType = trim((string) ($row['election_type'] ?? ''));
+            $electionTypeSlug = trim((string) ($row['election_type_slug'] ?? ''));
+            $electionDate = $this->normalizeDate($row['election_date'] ?? null);
+
+            $normalized[] = [
+                'state_name' => $stateName,
+                'state_slug' => $stateSlug,
+                'election_type' => $electionType,
+                'election_type_slug' => $electionTypeSlug,
+                'election_type_label' => $this->formatElectionType($electionType),
+                'election_date' => $electionDate,
+                'event_label' => $this->buildEventLabel($stateName, $electionType),
+                'event_url' => $this->buildEventUrl($stateSlug, $electionTypeSlug, $electionDate),
+                'offices' => $this->normalizeOfficeList($row['offices'] ?? []),
+            ];
         }
 
-        $accountabilitySignals = $this->candidateRepository->getHomepageAccountabilitySignals(5);
-        $latestUpdates = $this->candidateRepository->getHomepageLatestUpdates(8);
-        $browseOffices = $this->raceRepository->getHomepageBrowseOffices();
-        $browseStates = $this->raceRepository->getHomepageBrowseStates();
+        return $normalized;
+    }
 
-        $hero = [
-            'title' => 'Election Watch Dashboard',
-            'subtitle' => 'Track upcoming election events, watched races, and candidate accountability.',
-            'stats' => [
-                [
-                    'label' => 'Active Races',
-                    'value' => (int)($stats['activeRaces'] ?? 0),
-                    'icon' => 'fa-landmark',
-                ],
-                [
-                    'label' => 'Upcoming Elections',
-                    'value' => (int)($stats['upcomingElections'] ?? 0),
-                    'icon' => 'fa-calendar-day',
-                ],
-                [
-                    'label' => 'Tracked Candidates',
-                    'value' => (int)($stats['trackedCandidates'] ?? 0),
-                    'icon' => 'fa-users',
-                ],
-                [
-                    'label' => 'Documented Flags',
-                    'value' => (int)($stats['documentedFlags'] ?? 0),
-                    'icon' => 'fa-flag',
-                ],
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeStateRows(array $rows): array
+    {
+        $normalized = [];
+
+        foreach ($rows as $row) {
+            $stateName = trim((string) ($row['state_name'] ?? ''));
+            $stateSlug = trim((string) ($row['state_slug'] ?? ''));
+            $electionType = trim((string) ($row['election_type'] ?? ''));
+            $electionTypeSlug = trim((string) ($row['election_type_slug'] ?? ''));
+            $electionDate = $this->normalizeDate($row['next_election_date'] ?? null);
+
+            $normalized[] = [
+                'state_name' => $stateName,
+                'state_slug' => $stateSlug,
+                'next_election_date' => $electionDate,
+                'election_type' => $electionType,
+                'election_type_slug' => $electionTypeSlug,
+                'election_type_label' => $electionType !== ''
+                    ? $this->formatElectionType($electionType)
+                    : null,
+                'event_label' => $electionDate !== null
+                    ? $this->buildEventLabel($stateName, $electionType)
+                    : null,
+                'event_url' => $this->buildEventUrl($stateSlug, $electionTypeSlug, $electionDate),
+                'offices' => $this->normalizeOfficeList($row['offices'] ?? []),
+            ];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param string|array<int, mixed>|null $value
+     * @return array<int, string>
+     */
+    private function normalizeOfficeList(string|array|null $value): array
+    {
+        $items = [];
+
+        if (is_array($value)) {
+            $items = $value;
+        } elseif (is_string($value) && $value !== '') {
+            $items = explode('||', $value);
+        }
+
+        $normalized = [];
+
+        foreach ($items as $item) {
+            $office = trim((string) $item);
+
+            if ($office === '') {
+                continue;
+            }
+
+            $normalized[$office] = $office;
+        }
+
+        return array_values($normalized);
+    }
+
+    private function normalizeDate(mixed $value): ?string
+    {
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        $date = trim($value);
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1
+            ? $date
+            : null;
+    }
+
+    private function buildEventLabel(string $stateName, string $electionType): string
+    {
+        $stateName = trim($stateName);
+        $typeLabel = $this->formatElectionType($electionType);
+
+        if ($stateName === '') {
+            return $typeLabel;
+        }
+
+        if ($typeLabel === '') {
+            return $stateName;
+        }
+
+        return $stateName . ' ' . $typeLabel;
+    }
+
+    private function buildEventUrl(string $stateSlug, string $electionTypeSlug, ?string $electionDate): ?string
+    {
+        if ($stateSlug === '' || $electionTypeSlug === '' || $electionDate === null) {
+            return null;
+        }
+
+        return '/elections/' . rawurlencode($stateSlug) . '/' . rawurlencode($electionTypeSlug) . '/' . rawurlencode($electionDate);
+    }
+
+    private function formatElectionType(string $value): string
+    {
+        return match (strtolower(trim($value))) {
+            'primary' => 'Primary',
+            'general' => 'General',
+            'runoff' => 'Runoff',
+            'special' => 'Special',
+            'special-primary' => 'Special Primary',
+            'jungle primary' => 'Jungle Primary',
+            'ranked-choice general' => 'Ranked Choice General',
+            default => trim($value),
+        };
+    }
+
+    /**
+     * @return array<int, array<string, string>>
+     */
+    private function getBrowseOffices(): array
+    {
+        return [
+            [
+                'name' => 'President',
+                'slug' => 'president',
+            ],
+            [
+                'name' => 'U.S. Senate',
+                'slug' => 'us-senate',
+            ],
+            [
+                'name' => 'U.S. House',
+                'slug' => 'us-house',
+            ],
+            [
+                'name' => 'Governor',
+                'slug' => 'governor',
             ],
         ];
-
-        $methodology = [
-            'trackedOffices' => [
-                'President',
-                'U.S. Senate',
-                'U.S. House',
-                'Governor',
-            ],
-            'trackedElectionTypes' => [
-                'primary',
-                'general',
-                'runoff',
-                'special',
-                'special-primary',
-                'jungle primary',
-                'ranked-choice general',
-            ],
-            'sourcePolicy' => 'Candidate records are documented using publicly sourced information.',
-        ];
-
-        render_view('home/index', [
-            'pageTitle' => 'YouAreDone.org',
-            'metaDescription' => 'Track upcoming election events, watched races, and candidate accountability.',
-            'canonicalUrl' => absolute_url('/'),
-            'ogImage' => absolute_url('/assets/images/og-default.png'),
-
-            'hero' => $hero,
-            'nextEvents' => $nextEvents,
-            'upcomingEvents' => $upcomingEvents,
-            'mostWatchedRaces' => $mostWatchedRaces,
-            'accountabilitySignals' => $accountabilitySignals,
-            'featuredRace' => $featuredRace,
-            'latestUpdates' => $latestUpdates,
-            'browseOffices' => $browseOffices,
-            'browseStates' => $browseStates,
-            'methodology' => $methodology,
-        ]);
     }
 }

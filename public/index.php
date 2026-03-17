@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Controllers\HomeController;
 use App\Controllers\CandidateController;
 use App\Controllers\RaceController;
+use App\Controllers\ElectionController;
 use App\Core\Router;
 
 require_once dirname(__DIR__) . '/bootstrap.php';
@@ -60,6 +61,22 @@ $router->get('/races/{stateSlug:[a-z0-9-]+}/{officeSlug:[a-z0-9-]+}/{year:[0-9][
 
     (new RaceController())->show($stateSlug, $officeSlug, $year, $district);
 });
+
+$router->get(
+    '/elections/{stateSlug:[a-z0-9-]+}/{electionTypeSlug:[a-z0-9-]+}/{electionDate:[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]}',
+    static function (array $params): void {
+        $stateSlug = trim((string) ($params['stateSlug'] ?? ''));
+        $electionTypeSlug = trim((string) ($params['electionTypeSlug'] ?? ''));
+        $electionDate = trim((string) ($params['electionDate'] ?? ''));
+
+        if ($stateSlug === '' || $electionTypeSlug === '' || $electionDate === '') {
+            not_found($_SERVER['REQUEST_URI'] ?? '/');
+            return;
+        }
+
+        (new ElectionController())->show($stateSlug, $electionTypeSlug, $electionDate);
+    }
+);
 
 $router->setNotFound(static function (): void {
     not_found($_SERVER['REQUEST_URI'] ?? '/');
