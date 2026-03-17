@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Controllers\HomeController;
 use App\Controllers\CandidateController;
 use App\Controllers\RaceController;
 use App\Core\Router;
@@ -19,11 +20,7 @@ $path = normalize_path($requestUri);
 $router = new Router();
 
 $router->get('/', static function (): void {
-    render_view('home', [
-        'pageTitle' => 'YouAreDone.org',
-        'metaDescription' => 'Track candidates, races, rankings, and election details.',
-        'canonicalUrl' => absolute_url('/'),
-    ]);
+    (new HomeController())->index();
 });
 
 $router->get('/candidate/{slug:[a-z0-9-]+}', static function (array $params): void {

@@ -19,8 +19,7 @@ final class CandidateRepository
     public function findBySlug(string $slug): ?array
     {
         $sql = "
-            SELECT
-                c.*
+            SELECT c.*
             FROM candidates c
             WHERE c.slug = :slug
               AND c.status = 'active'
@@ -55,17 +54,23 @@ final class CandidateRepository
                 f.description AS flag_description,
                 f.flag_color,
                 f.default_weight,
-                COALESCE(cf.weight_override, f.default_weight) AS effective_weight
+                COALESCE(cf.weight_override, f.default_weight) AS effective_weight,
+                cs.source_name,
+                cs.source_url,
+                cs.source_type
             FROM candidate_flags cf
             INNER JOIN flags f
                 ON f.flag_id = cf.flag_id
+            LEFT JOIN candidate_sources cs
+                ON cs.source_id = cf.source_id
             WHERE cf.candidate_id = :candidate_id
               AND cf.is_active = 1
               AND f.is_active = 1
             ORDER BY
                 f.flag_color ASC,
                 f.sort_order ASC,
-                f.name ASC
+                f.name ASC,
+                cf.candidate_flag_id ASC
         ";
 
         $stmt = $this->db->prepare($sql);
@@ -110,8 +115,14 @@ final class CandidateRepository
                 r.state_slug,
                 r.district_type,
                 r.district_number,
+                r.district_label,
+                r.seat_label,
+                r.is_special,
                 o.name AS office_name,
-                o.slug AS office_slug
+                o.slug AS office_slug,
+                cs.source_name,
+                cs.source_url,
+                cs.source_type
             FROM election_candidate_flags ecf
             INNER JOIN flags f
                 ON f.flag_id = ecf.flag_id
@@ -123,6 +134,8 @@ final class CandidateRepository
                 ON r.race_id = e.race_id
             INNER JOIN offices o
                 ON o.office_id = r.office_id
+            LEFT JOIN candidate_sources cs
+                ON cs.source_id = ecf.source_id
             WHERE ecf.candidate_id = :candidate_id
               AND ecf.is_active = 1
               AND f.is_active = 1
@@ -131,7 +144,8 @@ final class CandidateRepository
                 e.round_number DESC,
                 f.flag_color ASC,
                 f.sort_order ASC,
-                f.name ASC
+                f.name ASC,
+                ecf.election_candidate_flag_id ASC
         ";
 
         $stmt = $this->db->prepare($sql);
@@ -194,7 +208,8 @@ final class CandidateRepository
                 e.election_date DESC,
                 e.round_number DESC,
                 r.election_year DESC,
-                o.name ASC
+                o.sort_order ASC,
+                r.race_id ASC
         ";
 
         $stmt = $this->db->prepare($sql);
@@ -215,15 +230,383 @@ final class CandidateRepository
 
         $candidateId = (int)$candidate['candidate_id'];
 
-        $candidateFlags = $this->getCandidateFlags($candidateId);
-        $electionSpecificFlags = $this->getElectionSpecificFlags($candidateId);
-        $history = $this->getElectionHistory($candidateId);
-
         return [
             'candidate' => $candidate,
-            'candidate_flags' => $candidateFlags,
-            'election_flags' => $electionSpecificFlags,
-            'history' => $history,
+            'candidate_flags' => $this->getCandidateFlags($candidateId),
+            'election_flags' => $this->getElectionSpecificFlags($candidateId),
+            'history' => $this->getElectionHistory($candidateId),
         ];
+    }
+
+    public function getHomepageStats(): array
+    {
+        $sql = "
+            SELECT
+                (SELECT COUNT(*)
+                 FROM races r
+                 WHERE r.status = 'active') AS activeRaces,
+
+                (SELECT COUNT(*)
+                 FROM elections e
+                 INNER JOIN races r
+                     ON r.race_id = e.race_id
+                 WHERE r.status = 'active'
+                   AND e.status IN ('upcoming', 'ongoing')) AS upcomingElections,
+
+                (SELECT COUNT(*)
+                 FROM candidates c
+                 WHERE c.status = 'active') AS trackedCandidates,
+
+                (
+                    (SELECT COUNT(*)
+                     FROM candidate_flags cf
+                     WHERE cf.is_active = 1)
+                    +
+                    (SELECT COUNT(*)
+                     FROM election_candidate_flags ecf
+                     WHERE ecf.is_active = 1)
+                ) AS documentedFlags
+        ";
+
+        $stmt = $this->db->query($sql);
+        $row = $stmt->fetch() ?: [];
+
+        return [
+            'activeRaces' => (int)($row['activeRaces'] ?? 0),
+            'upcomingElections' => (int)($row['upcomingElections'] ?? 0),
+            'trackedCandidates' => (int)($row['trackedCandidates'] ?? 0),
+            'documentedFlags' => (int)($row['documentedFlags'] ?? 0),
+        ];
+    }
+
+    public function getHomepageElectionCandidatePreview(int $electionId, int $limit = 3): array
+    {
+        $limit = max(1, $limit);
+
+        $sql = "
+            SELECT
+                ec.election_candidate_id,
+                ec.election_id,
+                ec.candidate_id,
+                ec.ballot_name,
+                ec.filing_status,
+                ec.ballot_status,
+                ec.result_status,
+                ec.is_incumbent,
+                ec.is_major_candidate,
+                ec.sort_order,
+                c.full_name,
+                c.slug,
+                c.score_total,
+                c.green_flag_count,
+                c.red_flag_count
+            FROM election_candidates ec
+            INNER JOIN candidates c
+                ON c.candidate_id = ec.candidate_id
+            WHERE ec.election_id = :election_id
+              AND c.status = 'active'
+            ORDER BY
+                ec.is_major_candidate DESC,
+                ec.is_incumbent DESC,
+                ec.sort_order ASC,
+                c.full_name ASC,
+                c.candidate_id ASC
+            LIMIT {$limit}
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'election_id' => $electionId,
+        ]);
+
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['candidate_url'] = '/candidate/' . rawurlencode((string)$row['slug']);
+            $row['candidate_id'] = (int)$row['candidate_id'];
+            $row['election_id'] = (int)$row['election_id'];
+            $row['is_incumbent'] = (int)$row['is_incumbent'];
+            $row['is_major_candidate'] = (int)$row['is_major_candidate'];
+            $row['sort_order'] = (int)$row['sort_order'];
+            $row['score_total'] = (float)$row['score_total'];
+            $row['green_flag_count'] = (int)$row['green_flag_count'];
+            $row['red_flag_count'] = (int)$row['red_flag_count'];
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    public function getHomepageRaceCandidatePreview(int $raceId, int $limit = 5): array
+    {
+        $limit = max(1, $limit);
+
+        $sql = "
+            SELECT
+                c.candidate_id,
+                c.full_name,
+                c.slug,
+                c.score_total,
+                c.green_flag_count,
+                c.red_flag_count,
+                MAX(ec.is_major_candidate) AS is_major_candidate,
+                MAX(ec.is_incumbent) AS is_incumbent,
+                MIN(ec.sort_order) AS best_sort_order
+            FROM election_candidates ec
+            INNER JOIN elections e
+                ON e.election_id = ec.election_id
+            INNER JOIN candidates c
+                ON c.candidate_id = ec.candidate_id
+            WHERE e.race_id = :race_id
+              AND c.status = 'active'
+            GROUP BY
+                c.candidate_id,
+                c.full_name,
+                c.slug,
+                c.score_total,
+                c.green_flag_count,
+                c.red_flag_count
+            ORDER BY
+                MAX(ec.is_major_candidate) DESC,
+                MAX(ec.is_incumbent) DESC,
+                MIN(ec.sort_order) ASC,
+                c.full_name ASC,
+                c.candidate_id ASC
+            LIMIT {$limit}
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'race_id' => $raceId,
+        ]);
+
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['candidate_url'] = '/candidate/' . rawurlencode((string)$row['slug']);
+            $row['candidate_id'] = (int)$row['candidate_id'];
+            $row['is_major_candidate'] = (int)$row['is_major_candidate'];
+            $row['is_incumbent'] = (int)$row['is_incumbent'];
+            $row['best_sort_order'] = (int)$row['best_sort_order'];
+            $row['score_total'] = (float)$row['score_total'];
+            $row['green_flag_count'] = (int)$row['green_flag_count'];
+            $row['red_flag_count'] = (int)$row['red_flag_count'];
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    public function getHomepageAccountabilitySignals(int $limit = 5): array
+    {
+        $limit = max(1, $limit);
+
+        $baseSql = "
+            SELECT
+                c.candidate_id,
+                c.full_name,
+                c.slug,
+                c.score_total,
+                c.green_flag_count,
+                c.red_flag_count,
+                r.state_name,
+                r.election_year,
+                o.name AS office_name,
+                r.district_type,
+                r.district_number,
+                r.district_label
+            FROM candidates c
+            INNER JOIN (
+                SELECT
+                    ec.candidate_id,
+                    MIN(e.election_date) AS first_active_election_date
+                FROM election_candidates ec
+                INNER JOIN elections e
+                    ON e.election_id = ec.election_id
+                INNER JOIN races r
+                    ON r.race_id = e.race_id
+                WHERE r.status = 'active'
+                GROUP BY ec.candidate_id
+            ) active_candidates
+                ON active_candidates.candidate_id = c.candidate_id
+            LEFT JOIN election_candidates ec2
+                ON ec2.candidate_id = c.candidate_id
+            LEFT JOIN elections e2
+                ON e2.election_id = ec2.election_id
+            LEFT JOIN races r
+                ON r.race_id = e2.race_id
+            LEFT JOIN offices o
+                ON o.office_id = r.office_id
+            WHERE c.status = 'active'
+            GROUP BY
+                c.candidate_id,
+                c.full_name,
+                c.slug,
+                c.score_total,
+                c.green_flag_count,
+                c.red_flag_count,
+                r.state_name,
+                r.election_year,
+                o.name,
+                r.district_type,
+                r.district_number,
+                r.district_label
+        ";
+
+        $negativeSql = $baseSql . "
+            HAVING c.score_total < 0
+            ORDER BY
+                c.score_total ASC,
+                c.red_flag_count DESC,
+                c.green_flag_count ASC,
+                c.full_name ASC
+            LIMIT {$limit}
+        ";
+
+        $positiveSql = $baseSql . "
+            HAVING c.score_total > 0
+            ORDER BY
+                c.score_total DESC,
+                c.green_flag_count DESC,
+                c.red_flag_count ASC,
+                c.full_name ASC
+            LIMIT {$limit}
+        ";
+
+        $negativeRows = $this->db->query($negativeSql)->fetchAll();
+        $positiveRows = $this->db->query($positiveSql)->fetchAll();
+
+        return [
+            'negative' => array_map(fn (array $row): array => $this->mapHomepageSignalRow($row), $negativeRows),
+            'positive' => array_map(fn (array $row): array => $this->mapHomepageSignalRow($row), $positiveRows),
+        ];
+    }
+
+    public function getHomepageLatestUpdates(int $limit = 8): array
+    {
+        $limit = max(1, $limit);
+
+        $sql = "
+            SELECT
+                cu.update_id,
+                cu.candidate_id,
+                cu.election_id,
+                cu.source_id,
+                cu.update_type,
+                cu.headline,
+                cu.summary,
+                cu.source_date,
+                cu.sort_date,
+                cu.is_public,
+                c.full_name AS candidate_name,
+                c.slug AS candidate_slug,
+                cs.source_name,
+                cs.source_url,
+                cs.source_type,
+                e.title AS election_title,
+                e.election_date,
+                e.slug AS election_slug,
+                r.race_id,
+                r.race_slug,
+                r.state_name,
+                r.election_year,
+                r.district_type,
+                r.district_number,
+                r.district_label,
+                o.name AS office_name
+            FROM candidate_updates cu
+            INNER JOIN candidates c
+                ON c.candidate_id = cu.candidate_id
+            LEFT JOIN candidate_sources cs
+                ON cs.source_id = cu.source_id
+            LEFT JOIN elections e
+                ON e.election_id = cu.election_id
+            LEFT JOIN races r
+                ON r.race_id = e.race_id
+            LEFT JOIN offices o
+                ON o.office_id = r.office_id
+            WHERE cu.is_public = 1
+            ORDER BY
+                cu.sort_date DESC,
+                cu.update_id DESC
+            LIMIT {$limit}
+        ";
+
+        $stmt = $this->db->query($sql);
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['update_id'] = (int)$row['update_id'];
+            $row['candidate_id'] = (int)$row['candidate_id'];
+            $row['election_id'] = $row['election_id'] !== null ? (int)$row['election_id'] : null;
+            $row['source_id'] = $row['source_id'] !== null ? (int)$row['source_id'] : null;
+            $row['candidate_url'] = '/candidate/' . rawurlencode((string)$row['candidate_slug']);
+            $row['race_label'] = $this->buildRaceLabel(
+                $row['state_name'] ?? null,
+                $row['office_name'] ?? null,
+                isset($row['election_year']) ? (int)$row['election_year'] : null,
+                $row['district_label'] ?? null,
+                $row['district_type'] ?? null,
+                isset($row['district_number']) ? (int)$row['district_number'] : null
+            );
+            $row['race_url'] = !empty($row['race_slug'])
+                ? '/races/' . ltrim((string)$row['race_slug'], '/')
+                : null;
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    private function mapHomepageSignalRow(array $row): array
+    {
+        return [
+            'candidate_id' => (int)$row['candidate_id'],
+            'full_name' => (string)$row['full_name'],
+            'slug' => (string)$row['slug'],
+            'candidate_url' => '/candidate/' . rawurlencode((string)$row['slug']),
+            'score_total' => (float)$row['score_total'],
+            'green_flag_count' => (int)$row['green_flag_count'],
+            'red_flag_count' => (int)$row['red_flag_count'],
+            'top_race_label' => $this->buildRaceLabel(
+                $row['state_name'] ?? null,
+                $row['office_name'] ?? null,
+                isset($row['election_year']) ? (int)$row['election_year'] : null,
+                $row['district_label'] ?? null,
+                $row['district_type'] ?? null,
+                isset($row['district_number']) ? (int)$row['district_number'] : null
+            ),
+        ];
+    }
+
+    private function buildRaceLabel(
+        ?string $stateName,
+        ?string $officeName,
+        ?int $electionYear,
+        ?string $districtLabel,
+        ?string $districtType,
+        ?int $districtNumber
+    ): string {
+        $parts = [];
+
+        if ($stateName) {
+            $parts[] = trim($stateName);
+        }
+
+        if ($officeName) {
+            $parts[] = trim($officeName);
+        }
+
+        if ($districtLabel) {
+            $parts[] = trim($districtLabel);
+        } elseif ($districtType === 'congressional_district' && $districtNumber !== null && $districtNumber > 0) {
+            $parts[] = 'District ' . $districtNumber;
+        }
+
+        if ($electionYear !== null && $electionYear > 0) {
+            $parts[] = (string)$electionYear;
+        }
+
+        return trim(implode(' ', $parts));
     }
 }
