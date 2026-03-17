@@ -341,6 +341,7 @@ final class ElectionRepository
     ): array {
         $sql = "
         SELECT
+            e.election_id,
             o.name AS office_name,
             o.slug AS office_slug,
             r.race_id,
@@ -386,6 +387,7 @@ final class ElectionRepository
             }
 
             $grouped[$office][] = [
+                'election_id' => (int)$row['election_id'],
                 'race_id' => (int)$row['race_id'],
                 'state_slug' => $row['state_slug'],
                 'office_slug' => $row['office_slug'],
@@ -396,7 +398,6 @@ final class ElectionRepository
                 'url' => $this->buildRaceUrl($row),
             ];
         }
-
 
         return $grouped;
     }

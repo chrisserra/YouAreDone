@@ -72,16 +72,22 @@ final class ElectionController
         foreach ($racesByOffice as $officeName => $races) {
             foreach ($races as $index => $race) {
                 $raceId = (int) ($race['race_id'] ?? 0);
+                $electionId = (int) ($race['election_id'] ?? 0);
 
-                $candidates = $raceId > 0
-                    ? $this->candidateRepository->getHomepageRaceCandidatePreview($raceId, 3)
-                    : [];
+                $candidates = $electionId > 0
+                    ? $this->candidateRepository->getHomepageElectionCandidatePreview($electionId, 3)
+                    : ($raceId > 0
+                        ? $this->candidateRepository->getHomepageRaceCandidatePreview($raceId, 3)
+                        : []);
 
                 foreach ($candidates as $candidateIndex => $candidate) {
                     $candidateId = (int) ($candidate['candidate_id'] ?? 0);
 
                     $candidates[$candidateIndex]['preview_flags'] = $candidateId > 0
-                        ? $this->candidateRepository->getCandidatePreviewReasonGroups($candidateId)
+                        ? $this->candidateRepository->getCandidatePreviewReasonGroups(
+                            $candidateId,
+                            $electionId > 0 ? $electionId : null
+                        )
                         : ['green' => [], 'red' => []];
                 }
 
