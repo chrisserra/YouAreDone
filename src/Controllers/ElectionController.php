@@ -69,10 +69,12 @@ final class ElectionController
      */
     private function attachCandidatePreviews(array $racesByOffice): array
     {
+        $candidatePairs = [];
+
         foreach ($racesByOffice as $officeName => $races) {
             foreach ($races as $index => $race) {
-                $raceId = (int) ($race['race_id'] ?? 0);
                 $electionId = (int) ($race['election_id'] ?? 0);
+                $raceId = (int) ($race['race_id'] ?? 0);
 
                 $candidates = $electionId > 0
                     ? $this->candidateRepository->getHomepageElectionCandidatePreview($electionId, 3)
@@ -80,15 +82,41 @@ final class ElectionController
                         ? $this->candidateRepository->getHomepageRaceCandidatePreview($raceId, 3)
                         : []);
 
-                foreach ($candidates as $candidateIndex => $candidate) {
+                $racesByOffice[$officeName][$index]['candidates'] = $candidates;
+
+                foreach ($candidates as $candidate) {
                     $candidateId = (int) ($candidate['candidate_id'] ?? 0);
 
-                    $candidates[$candidateIndex]['preview_flags'] = $candidateId > 0
-                        ? $this->candidateRepository->getCandidatePreviewReasonGroups(
-                            $candidateId,
-                            $electionId > 0 ? $electionId : null
-                        )
-                        : ['green' => [], 'red' => []];
+                    if ($candidateId <= 0) {
+                        continue;
+                    }
+
+                    $pairKey = $candidateId . ':' . ($electionId > 0 ? $electionId : 0);
+
+                    $candidatePairs[$pairKey] = [
+                        'candidate_id' => $candidateId,
+                        'election_id' => $electionId > 0 ? $electionId : null,
+                    ];
+                }
+            }
+        }
+
+        $previewFlagsMap = $this->candidateRepository->getCandidatePreviewReasonGroupsMap(
+            array_values($candidatePairs),
+            3
+        );
+
+        foreach ($racesByOffice as $officeName => $races) {
+            foreach ($races as $index => $race) {
+                $electionId = (int) ($race['election_id'] ?? 0);
+                $candidates = $racesByOffice[$officeName][$index]['candidates'] ?? [];
+
+                foreach ($candidates as $candidateIndex => $candidate) {
+                    $candidateId = (int) ($candidate['candidate_id'] ?? 0);
+                    $pairKey = $candidateId . ':' . ($electionId > 0 ? $electionId : 0);
+
+                    $candidates[$candidateIndex]['preview_flags'] = $previewFlagsMap[$pairKey]
+                        ?? ['green' => [], 'red' => []];
                 }
 
                 $racesByOffice[$officeName][$index]['candidates'] = $candidates;

@@ -340,33 +340,33 @@ final class ElectionRepository
         string $electionDate
     ): array {
         $sql = "
-        SELECT
-            e.election_id,
-            o.name AS office_name,
-            o.slug AS office_slug,
-            r.race_id,
-            r.state_name,
-            r.state_slug,
-            r.district_type,
-            r.district_number,
-            r.office_id,
-            r.election_year
-        FROM elections e
-        INNER JOIN election_types et
-            ON et.election_type_id = e.election_type_id
-        INNER JOIN races r
-            ON r.race_id = e.race_id
-        INNER JOIN offices o
-            ON o.office_id = r.office_id
-        WHERE r.state_slug = :stateSlug
-          AND et.slug = :electionTypeSlug
-          AND e.election_date = :electionDate
-          AND r.status = 'active'
-        ORDER BY
-            o.sort_order ASC,
-            o.name ASC,
-            r.district_number ASC
-    ";
+            SELECT
+                e.election_id,
+                o.name AS office_name,
+                o.slug AS office_slug,
+                r.race_id,
+                r.state_name,
+                r.state_slug,
+                r.district_type,
+                r.district_number,
+                r.office_id,
+                r.election_year
+            FROM elections e
+            INNER JOIN election_types et
+                ON et.election_type_id = e.election_type_id
+            INNER JOIN races r
+                ON r.race_id = e.race_id
+            INNER JOIN offices o
+                ON o.office_id = r.office_id
+            WHERE r.state_slug = :stateSlug
+              AND et.slug = :electionTypeSlug
+              AND e.election_date = :electionDate
+              AND r.status = 'active'
+            ORDER BY
+                o.sort_order ASC,
+                o.name ASC,
+                r.district_number ASC
+        ";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -375,25 +375,25 @@ final class ElectionRepository
             ':electionDate' => $electionDate,
         ]);
 
-        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $grouped = [];
 
         foreach ($rows as $row) {
-            $office = $row['office_name'];
+            $office = (string) $row['office_name'];
 
             if (!isset($grouped[$office])) {
                 $grouped[$office] = [];
             }
 
             $grouped[$office][] = [
-                'election_id' => (int)$row['election_id'],
-                'race_id' => (int)$row['race_id'],
-                'state_slug' => $row['state_slug'],
-                'office_slug' => $row['office_slug'],
-                'year' => (int)$row['election_year'],
+                'election_id' => (int) ($row['election_id'] ?? 0),
+                'race_id' => (int) ($row['race_id'] ?? 0),
+                'state_slug' => (string) ($row['state_slug'] ?? ''),
+                'office_slug' => (string) ($row['office_slug'] ?? ''),
+                'year' => (int) ($row['election_year'] ?? 0),
                 'district_type' => $row['district_type'],
-                'district_number' => (int)$row['district_number'],
+                'district_number' => (int) ($row['district_number'] ?? 0),
                 'label' => $this->buildRaceLabel($row),
                 'url' => $this->buildRaceUrl($row),
             ];
