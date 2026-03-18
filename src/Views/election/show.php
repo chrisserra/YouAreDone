@@ -131,11 +131,11 @@ $electionType = trim((string) ($event['election_type'] ?? ''));
                                         <?php foreach ($candidates as $candidate): ?>
                                             <?php
                                             $rank++;
-                                            $candidateName = trim((string) ($candidate['display_name'] ?? $candidate['candidate_name'] ?? 'Candidate'));
-                                            $candidateUrl = trim((string) ($candidate['url'] ?? ''));
-                                            $score = format_candidate_score($candidate['score'] ?? 0);
-                                            $greenFlags = (int) ($candidate['green_flags'] ?? 0);
-                                            $redFlags = (int) ($candidate['red_flags'] ?? 0);
+                                            $candidateName = trim((string) ($candidate['full_name'] ?? 'Candidate'));
+                                            $candidateUrl = trim((string) ($candidate['candidate_url'] ?? ''));
+                                            $score = format_candidate_score($candidate['score_total'] ?? 0);
+                                            $greenFlags = (int) ($candidate['green_flag_count'] ?? 0);
+                                            $redFlags = (int) ($candidate['red_flag_count'] ?? 0);
                                             $previewFlags = is_array($candidate['preview_flags'] ?? null)
                                                 ? $candidate['preview_flags']
                                                 : ['green' => [], 'red' => []];
@@ -145,9 +145,9 @@ $electionType = trim((string) ($event['election_type'] ?? ''));
                                             $isIncumbent = !empty($candidate['is_incumbent']);
 
                                             $rankLabel = match ($rank) {
-                                                1 => 'Top ranked',
-                                                2 => 'Second',
-                                                3 => 'Third',
+                                                1 => '🥇 Top ranked',
+                                                2 => '🥈 Second',
+                                                3 => '🥉 Third',
                                                 default => 'Ranked',
                                             };
 
@@ -160,53 +160,6 @@ $electionType = trim((string) ($event['election_type'] ?? ''));
                                             ?>
                                             <div class="event-candidate<?= $rankClass ?>">
                                                 <div class="event-candidate__main">
-                                                    <?php if ($greenReasons !== [] || $redReasons !== []): ?>
-                                                        <div class="event-candidate__reasons">
-                                                            <?php if ($greenReasons !== []): ?>
-                                                                <div class="event-candidate__reason-group">
-                                                                    <p class="event-candidate__reason-heading event-candidate__reason-heading--good">
-                                                                        Top Green Flags
-                                                                    </p>
-                                                                    <ul class="event-candidate__reason-list">
-                                                                        <?php foreach ($greenReasons as $reason): ?>
-                                                                            <?php
-                                                                            $reasonName = trim((string) ($reason['flag_name'] ?? ''));
-                                                                            $reasonNote = trim((string) ($reason['note'] ?? ''));
-                                                                            ?>
-                                                                            <li class="event-candidate__reason-item event-candidate__reason-item--good">
-                                                                                <span class="event-candidate__reason-name"><?= h($reasonName) ?></span>
-                                                                                <?php if ($reasonNote !== ''): ?>
-                                                                                    <span class="event-candidate__reason-note"><?= h($reasonNote) ?></span>
-                                                                                <?php endif; ?>
-                                                                            </li>
-                                                                        <?php endforeach; ?>
-                                                                    </ul>
-                                                                </div>
-                                                            <?php endif; ?>
-
-                                                            <?php if ($redReasons !== []): ?>
-                                                                <div class="event-candidate__reason-group">
-                                                                    <p class="event-candidate__reason-heading event-candidate__reason-heading--bad">
-                                                                        Top Red Flags
-                                                                    </p>
-                                                                    <ul class="event-candidate__reason-list">
-                                                                        <?php foreach ($redReasons as $reason): ?>
-                                                                            <?php
-                                                                            $reasonName = trim((string) ($reason['flag_name'] ?? ''));
-                                                                            $reasonNote = trim((string) ($reason['note'] ?? ''));
-                                                                            ?>
-                                                                            <li class="event-candidate__reason-item event-candidate__reason-item--bad">
-                                                                                <span class="event-candidate__reason-name"><?= h($reasonName) ?></span>
-                                                                                <?php if ($reasonNote !== ''): ?>
-                                                                                    <span class="event-candidate__reason-note"><?= h($reasonNote) ?></span>
-                                                                                <?php endif; ?>
-                                                                            </li>
-                                                                        <?php endforeach; ?>
-                                                                    </ul>
-                                                                </div>
-                                                            <?php endif; ?>
-                                                        </div>
-                                                    <?php endif; ?>
                                                     <div class="event-candidate__identity">
                                                         <div class="event-candidate__topline">
                                                             <span class="event-candidate__rank"><?= h($rankLabel) ?></span>
@@ -224,18 +177,47 @@ $electionType = trim((string) ($event['election_type'] ?? ''));
                                                             <span class="event-candidate__name"><?= h($candidateName) ?></span>
                                                         <?php endif; ?>
 
+                                                        <?php if ($greenReasons !== [] || $redReasons !== []): ?>
+                                                            <div class="event-candidate__badges">
+
+                                                                <?php foreach (array_slice($greenReasons, 0, 3) as $reason): ?>
+                                                                    <span class="flag-badge flag-badge--green">
+                                                                        <?= h($reason['flag_name'] ?? '') ?>
+                                                                    </span>
+                                                                <?php endforeach; ?>
+
+                                                                <?php foreach (array_slice($redReasons, 0, 3) as $reason): ?>
+                                                                    <span class="flag-badge flag-badge--red">
+                                                                        <?= h($reason['flag_name'] ?? '') ?>
+                                                                    </span>
+                                                                <?php endforeach; ?>
+
+                                                            </div>
+                                                        <?php endif; ?>
+
                                                         <div class="event-candidate__meta">
                                                             <span class="event-candidate__score">Score <?= h($score) ?></span>
                                                         </div>
                                                     </div>
 
                                                     <div class="event-candidate__flags">
-                                                        <span class="event-candidate__flag event-candidate__flag--good">
-                                                            Green <?= h((string) $greenFlags) ?>
-                                                        </span>
-                                                        <span class="event-candidate__flag event-candidate__flag--bad">
-                                                            Red <?= h((string) $redFlags) ?>
-                                                        </span>
+                                                        <?php if ($greenFlags > 0): ?>
+                                                            <span class="event-candidate__flag event-candidate__flag--good">
+                                                                Green <?= h((string) $greenFlags) ?>
+                                                            </span>
+                                                        <?php endif; ?>
+
+                                                        <?php if ($redFlags > 0): ?>
+                                                            <span class="event-candidate__flag event-candidate__flag--bad">
+                                                                Red <?= h((string) $redFlags) ?>
+                                                            </span>
+                                                        <?php endif; ?>
+
+                                                        <?php if ($greenFlags === 0 && $redFlags === 0): ?>
+                                                            <span class="event-candidate__flag event-candidate__flag--neutral">
+                                                                No documented flags yet
+                                                            </span>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>

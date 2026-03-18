@@ -284,35 +284,35 @@ final class CandidateRepository
         $limit = max(1, $limit);
 
         $sql = "
-            SELECT
-                ec.election_candidate_id,
-                ec.election_id,
-                ec.candidate_id,
-                ec.ballot_name,
-                ec.filing_status,
-                ec.ballot_status,
-                ec.result_status,
-                ec.is_incumbent,
-                ec.is_major_candidate,
-                ec.sort_order,
-                c.full_name,
-                c.slug,
-                c.score_total,
-                c.green_flag_count,
-                c.red_flag_count
-            FROM election_candidates ec
-            INNER JOIN candidates c
-                ON c.candidate_id = ec.candidate_id
-            WHERE ec.election_id = :election_id
-              AND c.status = 'active'
-            ORDER BY
-                ec.is_major_candidate DESC,
-                ec.is_incumbent DESC,
-                ec.sort_order ASC,
-                c.full_name ASC,
-                c.candidate_id ASC
-            LIMIT {$limit}
-        ";
+        SELECT
+            ec.election_candidate_id,
+            ec.election_id,
+            ec.candidate_id,
+            ec.ballot_name,
+            ec.filing_status,
+            ec.ballot_status,
+            ec.result_status,
+            ec.is_incumbent,
+            ec.is_major_candidate,
+            ec.sort_order,
+            c.full_name,
+            c.slug,
+            c.score_total,
+            c.green_flag_count,
+            c.red_flag_count
+        FROM election_candidates ec
+        INNER JOIN candidates c
+            ON c.candidate_id = ec.candidate_id
+        WHERE ec.election_id = :election_id
+          AND c.status = 'active'
+        ORDER BY
+            c.score_total DESC,
+            c.green_flag_count DESC,
+            c.red_flag_count ASC,
+            ec.is_incumbent DESC,
+            c.full_name ASC
+        LIMIT {$limit}
+    ";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -367,11 +367,10 @@ final class CandidateRepository
                 c.green_flag_count,
                 c.red_flag_count
             ORDER BY
-                MAX(ec.is_major_candidate) DESC,
-                MAX(ec.is_incumbent) DESC,
-                MIN(ec.sort_order) ASC,
-                c.full_name ASC,
-                c.candidate_id ASC
+                c.score_total DESC,
+                c.green_flag_count DESC,
+                c.red_flag_count ASC,
+                c.full_name ASC
             LIMIT {$limit}
         ";
 
