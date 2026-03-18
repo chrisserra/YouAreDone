@@ -57,7 +57,11 @@ MYSQL_PWD="$DUMP_PASS" "$MYSQLDUMP_BIN" \
   --skip-triggers \
   --compact \
   --single-transaction \
+  --complete-insert \
   "$DB_NAME" \
+  offices \
+  election_types \
+  flags \
   races \
   elections \
   candidates \
