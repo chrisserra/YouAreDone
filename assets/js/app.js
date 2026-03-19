@@ -1,49 +1,73 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const shareToggle = document.querySelector('[data-share-toggle]');
-    const shareMenu = document.querySelector('[data-share-menu]');
+    initShareMenu();
+    initCopyLinks();
+    initRaceToggles();
+    initStateTable();
+    initClickableRows();
+});
 
-    function closeShareMenu() {
-        if (!shareToggle || !shareMenu) {
+function initClickableRows() {
+    document.addEventListener('click', function (event) {
+        const row = event.target.closest('tr[data-href]');
+
+        if (!row) {
             return;
         }
 
+        if (event.target.closest('a, button, input, select, label')) {
+            return;
+        }
+
+        const href = row.getAttribute('data-href');
+
+        if (href) {
+            window.location.href = href;
+        }
+    });
+}
+
+function initShareMenu() {
+    const shareToggle = document.querySelector('[data-share-toggle]');
+    const shareMenu = document.querySelector('[data-share-menu]');
+
+    if (!shareToggle || !shareMenu) {
+        return;
+    }
+
+    function closeShareMenu() {
         shareMenu.hidden = true;
         shareToggle.setAttribute('aria-expanded', 'false');
     }
 
     function openShareMenu() {
-        if (!shareToggle || !shareMenu) {
-            return;
-        }
-
         shareMenu.hidden = false;
         shareToggle.setAttribute('aria-expanded', 'true');
     }
 
-    if (shareToggle && shareMenu) {
-        shareToggle.addEventListener('click', function (event) {
-            event.stopPropagation();
+    shareToggle.addEventListener('click', function (event) {
+        event.stopPropagation();
 
-            if (shareMenu.hidden) {
-                openShareMenu();
-            } else {
-                closeShareMenu();
-            }
-        });
+        if (shareMenu.hidden) {
+            openShareMenu();
+        } else {
+            closeShareMenu();
+        }
+    });
 
-        document.addEventListener('click', function (event) {
-            if (!shareMenu.contains(event.target) && !shareToggle.contains(event.target)) {
-                closeShareMenu();
-            }
-        });
+    document.addEventListener('click', function (event) {
+        if (!shareMenu.contains(event.target) && !shareToggle.contains(event.target)) {
+            closeShareMenu();
+        }
+    });
 
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') {
-                closeShareMenu();
-            }
-        });
-    }
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeShareMenu();
+        }
+    });
+}
 
+function initCopyLinks() {
     document.addEventListener('click', async function (event) {
         const button = event.target.closest('[data-copy-link]');
 
@@ -57,23 +81,48 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const originalText = button.innerHTML;
+        const originalHtml = button.innerHTML;
 
         try {
             await navigator.clipboard.writeText(url);
             button.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i><span>Copied</span>';
 
             window.setTimeout(function () {
-                button.innerHTML = originalText;
-                closeShareMenu();
+                button.innerHTML = originalHtml;
             }, 1400);
         } catch (error) {
             window.prompt('Copy this link:', url);
         }
     });
+}
 
-    initStateTable();
-});
+function initRaceToggles() {
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('[data-toggle-race]');
+
+        if (!button) {
+            return;
+        }
+
+        const container = button.closest('.event-race__candidates');
+
+        if (!container) {
+            return;
+        }
+
+        const hiddenCards = container.querySelectorAll('[data-hidden-candidate="true"]');
+        const isExpanded = button.getAttribute('aria-expanded') === 'true';
+
+        hiddenCards.forEach(function (card) {
+            card.style.display = isExpanded ? 'none' : 'block';
+        });
+
+        button.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+        button.textContent = isExpanded
+            ? (button.dataset.showLabel || 'View other candidates')
+            : (button.dataset.hideLabel || 'Hide other candidates');
+    });
+}
 
 function initStateTable() {
     const table = document.getElementById('state-table');
@@ -165,11 +214,10 @@ function initStateTable() {
     function updateSortButtons() {
         sortButtons.forEach(function (button) {
             const isActive = button.dataset.sortKey === currentSortKey;
-            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-
             const baseLabel = (button.dataset.label || button.textContent).replace(/ ↑| ↓/g, '');
-            button.dataset.label = baseLabel;
 
+            button.dataset.label = baseLabel;
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
             button.textContent = isActive
                 ? baseLabel + (currentSortDirection === 'asc' ? ' ↑' : ' ↓')
                 : baseLabel;

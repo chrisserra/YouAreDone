@@ -53,40 +53,49 @@ if (!function_exists('format_candidate_score')) {
 
 $eventLabel = trim((string) ($event['event_label'] ?? 'Election'));
 $electionDate = (string) ($event['election_date'] ?? '');
-$stateName = trim((string) ($event['state_name'] ?? ''));
-$electionType = trim((string) ($event['election_type'] ?? ''));
+
+$officeOrder = [
+    'President' => 1,
+    'Governor' => 2,
+    'U.S. Senate' => 3,
+    'U.S. House' => 4,
+];
+
+if ($racesByOffice !== []) {
+    uksort($racesByOffice, static function (string $a, string $b) use ($officeOrder): int {
+        $aRank = $officeOrder[$a] ?? 999;
+        $bRank = $officeOrder[$b] ?? 999;
+
+        if ($aRank === $bRank) {
+            return strcasecmp($a, $b);
+        }
+
+        return $aRank <=> $bRank;
+    });
+}
 ?>
 
 <section class="event-page-hero card">
     <p class="event-page-hero__eyebrow">Election Event</p>
     <h1 class="event-page-hero__title"><?= h($eventLabel) ?></h1>
+    <p class="event-page-hero__meta"><?= h(format_event_date($electionDate)) ?></p>
     <p class="event-page-hero__text">
-        Event-level overview for this tracked election date.
+        This page groups all tracked races in this election event by office and shows candidates ranked by documented
+        green and red flags.
     </p>
 </section>
 
 <section class="event-page-section">
-    <div class="section-heading">
-        <h2>Event Details</h2>
-        <p>High-level information for this election event.</p>
-    </div>
-
-    <div class="event-details card">
-        <div class="event-details__grid">
-            <div class="event-details__item">
-                <p class="event-details__label">Date</p>
-                <p class="event-details__value"><?= h(format_event_date($electionDate)) ?></p>
-            </div>
-
-            <div class="event-details__item">
-                <p class="event-details__label">State</p>
-                <p class="event-details__value"><?= h($stateName !== '' ? $stateName : '—') ?></p>
-            </div>
-
-            <div class="event-details__item">
-                <p class="event-details__label">Election Type</p>
-                <p class="event-details__value"><?= h($electionType !== '' ? $electionType : '—') ?></p>
-            </div>
+    <div class="event-page-explainer card">
+        <h2 class="event-page-explainer__title">How to read this page</h2>
+        <p class="event-page-explainer__text">
+            This page groups all tracked races in this election event by office and shows candidates ranked by documented
+            green and red flags. A candidate’s score is calculated from weighted green flags minus weighted red flags.
+            If candidates are tied for first, the incumbent shown in that tie should appear first.
+        </p>
+        <div class="event-page-explainer__legend">
+            <span class="flag-badge flag-badge--green">Green flags add points</span>
+            <span class="flag-badge flag-badge--red">Red flags subtract points</span>
         </div>
     </div>
 </section>
@@ -110,55 +119,74 @@ $electionType = trim((string) ($event['election_type'] ?? ''));
                             <?php
                             $raceLabel = trim((string) ($race['label'] ?? 'Race'));
                             $raceUrl = trim((string) ($race['url'] ?? ''));
-                            $candidates = is_array($race['candidates'] ?? null) ? array_values($race['candidates']) : [];
+                            $candidates = is_array($race['candidates'] ?? null)
+                                ? array_values($race['candidates'])
+                                : [];
+
+                            $otherCount = count($candidates) > 1 ? count($candidates) - 1 : 0;
+                            $isHouseRace = str_contains(strtolower($raceLabel), 'district');
                             ?>
                             <article class="event-race">
-                                <div class="event-race__header">
-                                    <?php if ($raceUrl !== ''): ?>
-                                        <h4 class="event-race__title">
-                                            <a href="<?= h($raceUrl) ?>" class="event-race__link">
-                                                <?= h($raceLabel) ?>
-                                            </a>
-                                        </h4>
-                                    <?php else: ?>
-                                        <h4 class="event-race__title"><?= h($raceLabel) ?></h4>
-                                    <?php endif; ?>
-                                </div>
+                                <?php if ($isHouseRace): ?>
+                                    <div class="event-race__header">
+                                        <?php if ($raceUrl !== ''): ?>
+                                            <h4 class="event-race__title">
+                                                <a href="<?= h($raceUrl) ?>" class="event-race__link">
+                                                    <?= h($raceLabel) ?>
+                                                </a>
+                                            </h4>
+                                        <?php else: ?>
+                                            <h4 class="event-race__title"><?= h($raceLabel) ?></h4>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
 
                                 <?php if ($candidates !== []): ?>
                                     <div class="event-race__candidates">
-                                        <?php $rank = 0; ?>
-                                        <?php foreach ($candidates as $candidate): ?>
+                                        <?php foreach ($candidates as $index => $candidate): ?>
                                             <?php
-                                            $rank++;
+                                            $rank = $index + 1;
                                             $candidateName = trim((string) ($candidate['full_name'] ?? 'Candidate'));
                                             $candidateUrl = trim((string) ($candidate['candidate_url'] ?? ''));
                                             $score = format_candidate_score($candidate['score_total'] ?? 0);
                                             $greenFlags = (int) ($candidate['green_flag_count'] ?? 0);
                                             $redFlags = (int) ($candidate['red_flag_count'] ?? 0);
+
                                             $previewFlags = is_array($candidate['preview_flags'] ?? null)
                                                 ? $candidate['preview_flags']
                                                 : ['green' => [], 'red' => []];
 
-                                            $greenReasons = is_array($previewFlags['green'] ?? null) ? $previewFlags['green'] : [];
-                                            $redReasons = is_array($previewFlags['red'] ?? null) ? $previewFlags['red'] : [];
+                                            $greenReasons = is_array($previewFlags['green'] ?? null)
+                                                ? $previewFlags['green']
+                                                : [];
+
+                                            $redReasons = is_array($previewFlags['red'] ?? null)
+                                                ? $previewFlags['red']
+                                                : [];
+
                                             $isIncumbent = !empty($candidate['is_incumbent']);
 
                                             $rankLabel = match ($rank) {
-                                                1 => '🥇 Top ranked',
-                                                2 => '🥈 Second',
-                                                3 => '🥉 Third',
+                                                1 => 'Top ranked',
+                                                2 => 'Second',
+                                                3 => 'Third',
                                                 default => 'Ranked',
                                             };
 
-                                            $rankClass = match ($rank) {
-                                                1 => ' event-candidate--rank-1',
-                                                2 => ' event-candidate--rank-2',
-                                                3 => ' event-candidate--rank-3',
-                                                default => '',
-                                            };
+                                            $rankClass = $rank === 1 ? ' event-candidate--top' : '';
+                                            $hiddenAttribute = $rank > 1 ? ' data-hidden-candidate="true"' : '';
+
+                                            $greenPoints = array_sum(array_map(
+                                                static fn(array $reason): float => (float) ($reason['effective_weight'] ?? 0),
+                                                $greenReasons
+                                            ));
+
+                                            $redPoints = array_sum(array_map(
+                                                static fn(array $reason): float => (float) ($reason['effective_weight'] ?? 0),
+                                                $redReasons
+                                            ));
                                             ?>
-                                            <div class="event-candidate<?= $rankClass ?>">
+                                            <div class="event-candidate<?= $rankClass ?>"<?= $hiddenAttribute ?>>
                                                 <div class="event-candidate__main">
                                                     <div class="event-candidate__identity">
                                                         <div class="event-candidate__topline">
@@ -169,34 +197,70 @@ $electionType = trim((string) ($event['election_type'] ?? ''));
                                                             <?php endif; ?>
                                                         </div>
 
-                                                        <?php if ($candidateUrl !== ''): ?>
-                                                            <a href="<?= h($candidateUrl) ?>" class="event-candidate__name">
-                                                                <?= h($candidateName) ?>
-                                                            </a>
-                                                        <?php else: ?>
-                                                            <span class="event-candidate__name"><?= h($candidateName) ?></span>
-                                                        <?php endif; ?>
+                                                        <span class="event-candidate__name"><?= h($candidateName) ?></span>
 
                                                         <?php if ($greenReasons !== [] || $redReasons !== []): ?>
                                                             <div class="event-candidate__badges">
-
-                                                                <?php foreach (array_slice($greenReasons, 0, 3) as $reason): ?>
-                                                                    <span class="flag-badge flag-badge--green">
-                                                                        <?= h($reason['flag_name'] ?? '') ?>
+                                                                <?php foreach ($greenReasons as $reason): ?>
+                                                                    <?php
+                                                                    $tooltip = (string) (
+                                                                        $reason['description']
+                                                                        ?? $reason['flag_description']
+                                                                        ?? $reason['note']
+                                                                        ?? ''
+                                                                    );
+                                                                    ?>
+                                                                    <span
+                                                                            class="flag-badge flag-badge--green"
+                                                                            title="<?= h($tooltip) ?>"
+                                                                    >
+                                                                        <span class="flag-badge__text">
+                                                                            <?= h((string) ($reason['flag_name'] ?? '')) ?>
+                                                                        </span>
+                                                                        <span class="flag-badge__points">
+                                                                            <?= h(format_candidate_score($reason['effective_weight'] ?? 0)) ?>
+                                                                        </span>
                                                                     </span>
                                                                 <?php endforeach; ?>
 
-                                                                <?php foreach (array_slice($redReasons, 0, 3) as $reason): ?>
-                                                                    <span class="flag-badge flag-badge--red">
-                                                                        <?= h($reason['flag_name'] ?? '') ?>
+                                                                <?php foreach ($redReasons as $reason): ?>
+                                                                    <?php
+                                                                    $tooltip = (string) (
+                                                                        $reason['description']
+                                                                        ?? $reason['flag_description']
+                                                                        ?? $reason['note']
+                                                                        ?? ''
+                                                                    );
+                                                                    ?>
+                                                                    <span
+                                                                            class="flag-badge flag-badge--red"
+                                                                            title="<?= h($tooltip) ?>"
+                                                                    >
+                                                                        <span class="flag-badge__text">
+                                                                            <?= h((string) ($reason['flag_name'] ?? '')) ?>
+                                                                        </span>
+                                                                        <span class="flag-badge__points">
+                                                                            <?= h(format_candidate_score($reason['effective_weight'] ?? 0)) ?>
+                                                                        </span>
                                                                     </span>
                                                                 <?php endforeach; ?>
-
                                                             </div>
                                                         <?php endif; ?>
 
                                                         <div class="event-candidate__meta">
-                                                            <span class="event-candidate__score">Score <?= h($score) ?></span>
+                                                            <div class="event-candidate__score-line">
+                                                                <span class="event-candidate__score-label">Score:</span>
+                                                                <span class="event-candidate__score-main">
+                                                                    <?= h($score) ?>
+                                                                </span>
+                                                                <span class="event-candidate__score-breakdown">
+                                                                    (
+                                                                    <span class="score-good"><?= h(format_candidate_score($greenPoints)) ?></span>
+                                                                    -
+                                                                    <span class="score-bad"><?= h(format_candidate_score($redPoints)) ?></span>
+                                                                    )
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
 
@@ -218,10 +282,29 @@ $electionType = trim((string) ($event['election_type'] ?? ''));
                                                                 No documented flags yet
                                                             </span>
                                                         <?php endif; ?>
+
+                                                        <?php if ($candidateUrl !== ''): ?>
+                                                            <a href="<?= h($candidateUrl) ?>" class="event-candidate__details-button">
+                                                                View candidate details
+                                                            </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
                                         <?php endforeach; ?>
+
+                                        <?php if ($otherCount > 0): ?>
+                                            <button
+                                                    type="button"
+                                                    class="event-race__toggle"
+                                                    data-toggle-race
+                                                    aria-expanded="false"
+                                                    data-show-label="View <?= h((string) $otherCount) ?> other candidate<?= $otherCount === 1 ? '' : 's' ?>"
+                                                    data-hide-label="Hide other candidates"
+                                            >
+                                                View <?= h((string) $otherCount) ?> other candidate<?= $otherCount === 1 ? '' : 's' ?>
+                                            </button>
+                                        <?php endif; ?>
                                     </div>
                                 <?php else: ?>
                                     <p class="event-race__empty">No candidate previews are available for this race yet.</p>

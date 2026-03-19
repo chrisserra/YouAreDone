@@ -118,65 +118,87 @@ final class RaceRepository
     public function getCandidatesForElection(int $electionId): array
     {
         $sql = "
-            SELECT
-                ec.election_candidate_id,
-                ec.election_id,
-                ec.candidate_id,
-                ec.ballot_name,
-                ec.party_code AS ballot_party_code,
-                ec.filing_status,
-                ec.ballot_status,
-                ec.result_status,
-                ec.is_incumbent,
-                ec.is_major_candidate,
-                ec.sort_order,
-                ec.vote_count,
-                ec.vote_percent,
-                ec.notes_public,
-                c.full_name,
-                c.slug,
-                c.first_name,
-                c.middle_name,
-                c.last_name,
-                c.suffix,
-                c.preferred_name,
-                c.party_code,
-                c.party_name,
-                c.website_url,
-                c.ballotpedia_url,
-                c.wikipedia_url,
-                c.x_url,
-                c.instagram_url,
-                c.facebook_url,
-                c.youtube_url,
-                c.image_url,
-                c.short_bio,
-                c.summary_public,
-                c.score_total,
-                c.green_flag_count,
-                c.red_flag_count
-            FROM election_candidates ec
-            INNER JOIN candidates c
-                ON c.candidate_id = ec.candidate_id
-            WHERE ec.election_id = :election_id
-              AND c.status = 'active'
-            ORDER BY
-                c.score_total DESC,
-                c.green_flag_count DESC,
-                c.red_flag_count ASC,
-                ec.is_incumbent DESC,
-                ec.is_major_candidate DESC,
-                ec.sort_order ASC,
-                c.full_name ASC,
-                c.candidate_id ASC
-        ";
+        SELECT
+            ec.election_candidate_id,
+            ec.election_id,
+            ec.candidate_id,
+            ec.ballot_name,
+            ec.party_code AS ballot_party_code,
+            ec.filing_status,
+            ec.ballot_status,
+            ec.result_status,
+            ec.is_incumbent,
+            ec.is_major_candidate,
+            ec.sort_order,
+            ec.vote_count,
+            ec.vote_percent,
+            ec.notes_public,
+            c.full_name,
+            c.slug,
+            c.first_name,
+            c.middle_name,
+            c.last_name,
+            c.suffix,
+            c.preferred_name,
+            c.party_code,
+            c.party_name,
+            c.website_url,
+            c.ballotpedia_url,
+            c.wikipedia_url,
+            c.x_url,
+            c.instagram_url,
+            c.facebook_url,
+            c.youtube_url,
+            c.image_url,
+            c.short_bio,
+            c.summary_public,
+            c.score_total,
+            c.green_flag_count,
+            c.red_flag_count
+        FROM election_candidates ec
+        INNER JOIN candidates c
+            ON c.candidate_id = ec.candidate_id
+        WHERE ec.election_id = :election_id
+          AND c.status = 'active'
+        ORDER BY
+            c.score_total DESC,
+            c.green_flag_count DESC,
+            c.red_flag_count ASC,
+            ec.is_incumbent DESC,
+            ec.is_major_candidate DESC,
+            ec.sort_order ASC,
+            c.full_name ASC,
+            c.candidate_id ASC
+    ";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             'election_id' => $electionId,
         ]);
 
-        return $stmt->fetchAll();
+        $candidates = $stmt->fetchAll();
+
+        if ($candidates === []) {
+            return [];
+        }
+
+        $candidateIds = array_map(
+            static fn(array $row): int => (int) $row['candidate_id'],
+            $candidates
+        );
+
+        $previewFlagsMap = $this->getCandidatePreviewFlagsMap($candidateIds);
+
+        foreach ($candidates as &$candidate) {
+            $candidateId = (int) $candidate['candidate_id'];
+            $candidate['preview_flags'] = $previewFlagsMap[$candidateId] ?? [
+                'green' => [],
+                'red' => [],
+            ];
+        }
+        unset($candidate);
+
+        return $candidates;
     }
 
     public function getRacePage(
@@ -992,5 +1014,75 @@ final class RaceRepository
         }
 
         return null;
+    }
+
+    private function getCandidatePreviewFlagsMap(array $candidateIds): array
+    {
+        $candidateIds = array_values(array_unique(array_filter(array_map('intval', $candidateIds))));
+
+        if ($candidateIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($candidateIds), '?'));
+
+        $sql = "
+        SELECT
+            cf.candidate_id,
+            f.flag_color,
+            COALESCE(NULLIF(TRIM(f.name), ''), f.slug) AS flag_name,
+            f.slug AS flag_slug,
+            f.description AS flag_description,
+            cf.note,
+            COALESCE(cf.weight_override, f.default_weight) AS effective_weight
+        FROM candidate_flags cf
+        INNER JOIN flags f
+            ON f.flag_id = cf.flag_id
+        WHERE cf.candidate_id IN ($placeholders)
+        ORDER BY
+            cf.candidate_id ASC,
+            CASE
+                WHEN f.flag_color = 'green' THEN 1
+                WHEN f.flag_color = 'red' THEN 2
+                ELSE 3
+            END ASC,
+            COALESCE(cf.weight_override, f.default_weight) DESC,
+            COALESCE(NULLIF(TRIM(f.name), ''), f.slug) ASC,
+            cf.candidate_flag_id ASC
+    ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($candidateIds);
+
+        $rows = $stmt->fetchAll();
+
+        $grouped = [];
+
+        foreach ($candidateIds as $candidateId) {
+            $grouped[$candidateId] = [
+                'green' => [],
+                'red' => [],
+            ];
+        }
+
+        foreach ($rows as $row) {
+            $candidateId = (int) $row['candidate_id'];
+            $flagColor = strtolower(trim((string) ($row['flag_color'] ?? '')));
+
+            if ($flagColor !== 'green' && $flagColor !== 'red') {
+                continue;
+            }
+
+            $grouped[$candidateId][$flagColor][] = [
+                'flag_name' => (string) ($row['flag_name'] ?? ''),
+                'flag_slug' => (string) ($row['flag_slug'] ?? ''),
+                'flag_description' => (string) ($row['flag_description'] ?? ''),
+                'description' => (string) ($row['flag_description'] ?? ''),
+                'note' => (string) ($row['note'] ?? ''),
+                'effective_weight' => $row['effective_weight'] ?? 0,
+            ];
+        }
+
+        return $grouped;
     }
 }

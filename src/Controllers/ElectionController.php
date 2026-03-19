@@ -77,9 +77,9 @@ final class ElectionController
                 $raceId = (int) ($race['race_id'] ?? 0);
 
                 $candidates = $electionId > 0
-                    ? $this->candidateRepository->getHomepageElectionCandidatePreview($electionId, 3)
+                    ? $this->candidateRepository->getHomepageElectionCandidatePreview($electionId, 100)
                     : ($raceId > 0
-                        ? $this->candidateRepository->getHomepageRaceCandidatePreview($raceId, 3)
+                        ? $this->candidateRepository->getHomepageRaceCandidatePreview($raceId, 100)
                         : []);
 
                 $racesByOffice[$officeName][$index]['candidates'] = $candidates;
@@ -103,7 +103,7 @@ final class ElectionController
 
         $previewFlagsMap = $this->candidateRepository->getCandidatePreviewReasonGroupsMap(
             array_values($candidatePairs),
-            3
+            100
         );
 
         foreach ($racesByOffice as $officeName => $races) {
