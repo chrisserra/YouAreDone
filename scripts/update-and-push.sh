@@ -46,6 +46,7 @@ ssh cserraco@68.66.224.56 '
   set -e
   cd /home/cserraco/youaredone.org
   git fetch origin
+  git checkout master
   git reset --hard origin/master
   git clean -fd
   ./scripts/deploy.sh
