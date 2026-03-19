@@ -87,6 +87,16 @@ if (!function_exists('flag_color_class')) {
 }
 ?>
 
+<div class="page-back">
+    <button
+            type="button"
+            class="button button--ghost page-back__button"
+            onclick="if (document.referrer && window.history.length > 1) { history.back(); } else { window.location.href = '/'; }"
+    >
+        ← Back
+    </button>
+</div>
+
 <section class="page-section candidate-page">
     <div class="candidate-hero card">
         <div class="candidate-hero__top">
