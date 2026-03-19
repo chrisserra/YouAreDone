@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initRaceToggles();
     initStateTable();
     initClickableRows();
+    initClickableCards();
 });
 
 function initClickableRows() {
@@ -98,13 +99,22 @@ function initCopyLinks() {
 
 function initRaceToggles() {
     document.addEventListener('click', function (event) {
-        const button = event.target.closest('[data-toggle-race]');
+        const button = event.target.closest('[data-race-toggle]');
 
         if (!button) {
             return;
         }
 
-        const container = button.closest('.event-race__candidates');
+        const controlsId = button.getAttribute('aria-controls') || '';
+        let container = null;
+
+        if (controlsId !== '') {
+            container = document.getElementById(controlsId);
+        }
+
+        if (!container) {
+            container = button.closest('.event-race')?.querySelector('.event-candidates');
+        }
 
         if (!container) {
             return;
@@ -119,8 +129,48 @@ function initRaceToggles() {
 
         button.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
         button.textContent = isExpanded
-            ? (button.dataset.showLabel || 'View other candidates')
-            : (button.dataset.hideLabel || 'Hide other candidates');
+            ? (button.dataset.showText || 'View other candidates')
+            : (button.dataset.hideText || 'Hide other candidates');
+    });
+}
+
+function initClickableCards() {
+    document.addEventListener('click', function (event) {
+        const card = event.target.closest('.event-candidate--clickable[data-href]');
+
+        if (!card) {
+            return;
+        }
+
+        if (event.target.closest('a, button, input, select, label')) {
+            return;
+        }
+
+        const href = card.getAttribute('data-href');
+
+        if (href) {
+            window.location.href = href;
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        const card = event.target.closest('.event-candidate--clickable[data-href]');
+
+        if (!card) {
+            return;
+        }
+
+        if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+        }
+
+        event.preventDefault();
+
+        const href = card.getAttribute('data-href');
+
+        if (href) {
+            window.location.href = href;
+        }
     });
 }
 

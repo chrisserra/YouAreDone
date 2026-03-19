@@ -318,31 +318,32 @@ final class CandidateRepository
         $candidateIdList = implode(',', array_map('intval', array_values($normalizedCandidateIds)));
 
         $sql = "
-            SELECT
-                cf.candidate_flag_id,
-                cf.candidate_id,
-                cf.note,
-                f.flag_id,
-                f.slug AS flag_slug,
-                f.name AS flag_name,
-                f.flag_color,
-                f.default_weight,
-                COALESCE(cf.weight_override, f.default_weight) AS effective_weight
-            FROM candidate_flags cf
-            INNER JOIN flags f
-                ON f.flag_id = cf.flag_id
-            WHERE cf.is_active = 1
-              AND f.is_active = 1
-              AND cf.candidate_id IN ({$candidateIdList})
-              AND f.flag_color IN ('green', 'red')
-            ORDER BY
-                cf.candidate_id ASC,
-                f.flag_color ASC,
-                ABS(COALESCE(cf.weight_override, f.default_weight)) DESC,
-                f.sort_order ASC,
-                f.name ASC,
-                cf.candidate_flag_id ASC
-        ";
+        SELECT
+            cf.candidate_flag_id,
+            cf.candidate_id,
+            cf.note,
+            f.flag_id,
+            f.slug AS flag_slug,
+            f.name AS flag_name,
+            f.description AS flag_description,
+            f.flag_color,
+            f.default_weight,
+            COALESCE(cf.weight_override, f.default_weight) AS effective_weight
+        FROM candidate_flags cf
+        INNER JOIN flags f
+            ON f.flag_id = cf.flag_id
+        WHERE cf.is_active = 1
+          AND f.is_active = 1
+          AND cf.candidate_id IN ({$candidateIdList})
+          AND f.flag_color IN ('green', 'red')
+        ORDER BY
+            cf.candidate_id ASC,
+            f.flag_color ASC,
+            ABS(COALESCE(cf.weight_override, f.default_weight)) DESC,
+            f.sort_order ASC,
+            f.name ASC,
+            cf.candidate_flag_id ASC
+    ";
 
         $rows = $this->db->query($sql)->fetchAll();
 
@@ -375,6 +376,7 @@ final class CandidateRepository
                 'flag_id' => $flagId,
                 'flag_slug' => (string) ($row['flag_slug'] ?? ''),
                 'flag_name' => (string) ($row['flag_name'] ?? ''),
+                'flag_description' => trim((string) ($row['flag_description'] ?? '')),
                 'flag_color' => $flagColor,
                 'default_weight' => (float) ($row['default_weight'] ?? 0),
                 'effective_weight' => (float) ($row['effective_weight'] ?? 0),
