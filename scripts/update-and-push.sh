@@ -26,19 +26,20 @@ git status --short
 echo "==> Staging changes..."
 git add .
 
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+
 if git diff --cached --quiet; then
   echo "==> No changes to commit."
-  exit 0
+  echo "==> Skipping commit/push and deploying current $CURRENT_BRANCH"
+else
+  COMMIT_MESSAGE="${1:-update snapshot $(date '+%Y-%m-%d %H:%M:%S')}"
+
+  echo "==> Committing with message: $COMMIT_MESSAGE"
+  git commit -m "$COMMIT_MESSAGE"
+
+  echo "==> Pushing to branch: $CURRENT_BRANCH"
+  git push origin "$CURRENT_BRANCH"
 fi
-
-COMMIT_MESSAGE="${1:-update snapshot $(date '+%Y-%m-%d %H:%M:%S')}"
-
-echo "==> Committing with message: $COMMIT_MESSAGE"
-git commit -m "$COMMIT_MESSAGE"
-
-CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-echo "==> Pushing to branch: $CURRENT_BRANCH"
-git push origin "$CURRENT_BRANCH"
 
 echo "==> Deploying to server..."
 ssh cserraco@68.66.224.56 '
