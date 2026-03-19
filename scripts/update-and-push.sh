@@ -40,19 +40,7 @@ CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 echo "==> Pushing to branch: $CURRENT_BRANCH"
 git push origin "$CURRENT_BRANCH"
 
-DEPLOY_SSH_HOST="${DEPLOY_SSH_HOST:-68.66.224.56}"
-DEPLOY_SSH_USER="${DEPLOY_SSH_USER:-cserraco}"
-DEPLOY_APP_DIR="${DEPLOY_APP_DIR:-/home/cserraco/youaredone.org}"
-DEPLOY_BRANCH="${DEPLOY_BRANCH:-master}"
-
-echo "==> Pulling latest code on web server..."
-ssh "${DEPLOY_SSH_USER}@${DEPLOY_SSH_HOST}" "
-  set -e
-  cd '${DEPLOY_APP_DIR}'
-  echo '==> Server repo:' \$(pwd)
-  git fetch origin
-  git checkout '${DEPLOY_BRANCH}'
-  git pull --ff-only origin '${DEPLOY_BRANCH}'
-"
+echo "==> Deploying to server..."
+ssh cserraco@68.66.224.56 "cd /home/cserraco/youaredone.org && git pull origin master"
 
 echo "==> Done."
