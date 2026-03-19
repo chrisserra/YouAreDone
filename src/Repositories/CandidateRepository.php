@@ -153,7 +153,7 @@ final class CandidateRepository
             return null;
         }
 
-        $candidateId = (int)$candidate['candidate_id'];
+        $candidateId = (int) $candidate['candidate_id'];
 
         return [
             'candidate' => $candidate,
@@ -167,35 +167,35 @@ final class CandidateRepository
         $limit = max(1, $limit);
 
         $sql = "
-        SELECT
-            ec.election_candidate_id,
-            ec.election_id,
-            ec.candidate_id,
-            ec.ballot_name,
-            ec.filing_status,
-            ec.ballot_status,
-            ec.result_status,
-            ec.is_incumbent,
-            ec.is_major_candidate,
-            ec.sort_order,
-            c.full_name,
-            c.slug,
-            c.score_total,
-            c.green_flag_count,
-            c.red_flag_count
-        FROM election_candidates ec
-        INNER JOIN candidates c
-            ON c.candidate_id = ec.candidate_id
-        WHERE ec.election_id = :election_id
-          AND c.status = 'active'
-        ORDER BY
-            c.score_total DESC,
-            c.green_flag_count DESC,
-            c.red_flag_count ASC,
-            ec.is_incumbent DESC,
-            c.full_name ASC
-        LIMIT {$limit}
-    ";
+            SELECT
+                ec.election_candidate_id,
+                ec.election_id,
+                ec.candidate_id,
+                ec.ballot_name,
+                ec.filing_status,
+                ec.ballot_status,
+                ec.result_status,
+                ec.is_incumbent,
+                ec.is_major_candidate,
+                ec.sort_order,
+                c.full_name,
+                c.slug,
+                c.score_total,
+                c.green_flag_count,
+                c.red_flag_count
+            FROM election_candidates ec
+            INNER JOIN candidates c
+                ON c.candidate_id = ec.candidate_id
+            WHERE ec.election_id = :election_id
+              AND c.status = 'active'
+            ORDER BY
+                c.score_total DESC,
+                c.green_flag_count DESC,
+                c.red_flag_count ASC,
+                ec.is_incumbent DESC,
+                c.full_name ASC
+            LIMIT {$limit}
+        ";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -205,16 +205,18 @@ final class CandidateRepository
         $rows = $stmt->fetchAll();
 
         foreach ($rows as &$row) {
-            $row['candidate_url'] = '/candidate/' . rawurlencode((string)$row['slug']);
-            $row['candidate_id'] = (int)$row['candidate_id'];
-            $row['election_id'] = (int)$row['election_id'];
-            $row['is_incumbent'] = (int)$row['is_incumbent'];
-            $row['is_major_candidate'] = (int)$row['is_major_candidate'];
-            $row['sort_order'] = (int)$row['sort_order'];
-            $row['score_total'] = (float)$row['score_total'];
-            $row['green_flag_count'] = (int)$row['green_flag_count'];
-            $row['red_flag_count'] = (int)$row['red_flag_count'];
+            $row['candidate_url'] = '/candidate/' . rawurlencode((string) $row['slug']);
+            $row['election_candidate_id'] = (int) ($row['election_candidate_id'] ?? 0);
+            $row['election_id'] = (int) ($row['election_id'] ?? 0);
+            $row['candidate_id'] = (int) ($row['candidate_id'] ?? 0);
+            $row['is_incumbent'] = (int) ($row['is_incumbent'] ?? 0);
+            $row['is_major_candidate'] = (int) ($row['is_major_candidate'] ?? 0);
+            $row['sort_order'] = (int) ($row['sort_order'] ?? 0);
+            $row['score_total'] = (float) ($row['score_total'] ?? 0);
+            $row['green_flag_count'] = (int) ($row['green_flag_count'] ?? 0);
+            $row['red_flag_count'] = (int) ($row['red_flag_count'] ?? 0);
         }
+
         unset($row);
 
         return $rows;
@@ -265,175 +267,86 @@ final class CandidateRepository
         $rows = $stmt->fetchAll();
 
         foreach ($rows as &$row) {
-            $row['candidate_url'] = '/candidate/' . rawurlencode((string)$row['slug']);
-            $row['candidate_id'] = (int)$row['candidate_id'];
-            $row['is_major_candidate'] = (int)$row['is_major_candidate'];
-            $row['is_incumbent'] = (int)$row['is_incumbent'];
-            $row['best_sort_order'] = (int)$row['best_sort_order'];
-            $row['score_total'] = (float)$row['score_total'];
-            $row['green_flag_count'] = (int)$row['green_flag_count'];
-            $row['red_flag_count'] = (int)$row['red_flag_count'];
+            $row['candidate_url'] = '/candidate/' . rawurlencode((string) $row['slug']);
+            $row['candidate_id'] = (int) ($row['candidate_id'] ?? 0);
+            $row['is_major_candidate'] = (int) ($row['is_major_candidate'] ?? 0);
+            $row['is_incumbent'] = (int) ($row['is_incumbent'] ?? 0);
+            $row['best_sort_order'] = (int) ($row['best_sort_order'] ?? 0);
+            $row['score_total'] = (float) ($row['score_total'] ?? 0);
+            $row['green_flag_count'] = (int) ($row['green_flag_count'] ?? 0);
+            $row['red_flag_count'] = (int) ($row['red_flag_count'] ?? 0);
         }
+
         unset($row);
 
         return $rows;
     }
 
     /**
-     * @param array<int, array{candidate_id:int, election_id:int|null}> $candidateElectionPairs
-     * @return array<string, array{green: array<int, array<string, mixed>>, red: array<int, array<string, mixed>>}>
+     * @param array<int, int> $candidateIds
+     * @return array<int, array{green: array<int, array<string, mixed>>, red: array<int, array<string, mixed>>}>
      */
-    public function getCandidatePreviewReasonGroupsMap(array $candidateElectionPairs, int $limitPerColor = 3): array
+    public function getCandidatePreviewReasonGroupsMap(array $candidateIds, int $limitPerColor = 3): array
     {
         $limitPerColor = max(1, $limitPerColor);
 
-        $normalizedPairs = [];
-        $candidateIds = [];
-        $electionIds = [];
+        $normalizedCandidateIds = [];
 
-        foreach ($candidateElectionPairs as $pair) {
-            $candidateId = (int) ($pair['candidate_id'] ?? 0);
-            $electionId = isset($pair['election_id']) ? (int) $pair['election_id'] : 0;
+        foreach ($candidateIds as $candidateId) {
+            $candidateId = (int) $candidateId;
 
             if ($candidateId <= 0) {
                 continue;
             }
 
-            $key = $candidateId . ':' . ($electionId > 0 ? $electionId : 0);
-
-            $normalizedPairs[$key] = [
-                'candidate_id' => $candidateId,
-                'election_id' => $electionId > 0 ? $electionId : null,
-            ];
-
-            $candidateIds[$candidateId] = $candidateId;
-
-            if ($electionId > 0) {
-                $electionIds[$electionId] = $electionId;
-            }
+            $normalizedCandidateIds[$candidateId] = $candidateId;
         }
 
-        if ($normalizedPairs === []) {
+        if ($normalizedCandidateIds === []) {
             return [];
         }
 
         $result = [];
 
-        foreach ($normalizedPairs as $key => $pair) {
-            $result[$key] = [
+        foreach ($normalizedCandidateIds as $candidateId) {
+            $result[$candidateId] = [
                 'green' => [],
                 'red' => [],
             ];
         }
 
-        $candidateIdList = implode(',', array_map('intval', array_values($candidateIds)));
-        $electionIdList = implode(',', array_map('intval', array_values($electionIds)));
-
-        $eventSpecificByPair = [];
-        $globalByCandidate = [];
-
-        if ($electionIdList !== '') {
-            $sql = "
-        SELECT
-            ecf.election_candidate_flag_id AS candidate_flag_id,
-            ecf.election_id,
-            ecf.candidate_id,
-            ecf.note,
-            f.flag_id,
-            f.slug AS flag_slug,
-            f.name AS flag_name,
-            f.flag_color,
-            f.default_weight,
-            COALESCE(ecf.weight_override, f.default_weight) AS effective_weight
-        FROM election_candidate_flags ecf
-        INNER JOIN flags f
-            ON f.flag_id = ecf.flag_id
-        WHERE ecf.is_active = 1
-          AND f.is_active = 1
-          AND ecf.candidate_id IN ({$candidateIdList})
-          AND ecf.election_id IN ({$electionIdList})
-          AND f.flag_color IN ('green', 'red')
-        ORDER BY
-            ecf.election_id ASC,
-            ecf.candidate_id ASC,
-            f.flag_color ASC,
-            ABS(COALESCE(ecf.weight_override, f.default_weight)) DESC,
-            f.sort_order ASC,
-            f.name ASC,
-            ecf.election_candidate_flag_id ASC
-        ";
-
-            $rows = $this->db->query($sql)->fetchAll();
-
-            foreach ($rows as $row) {
-                $electionId = (int) ($row['election_id'] ?? 0);
-                $candidateId = (int) ($row['candidate_id'] ?? 0);
-                $flagColor = (string) ($row['flag_color'] ?? '');
-                $flagId = (int) ($row['flag_id'] ?? 0);
-
-                if ($electionId <= 0 || $candidateId <= 0 || $flagId <= 0 || ($flagColor !== 'green' && $flagColor !== 'red')) {
-                    continue;
-                }
-
-                $pairKey = $candidateId . ':' . $electionId;
-
-                if (!isset($normalizedPairs[$pairKey])) {
-                    continue;
-                }
-
-                if (!isset($eventSpecificByPair[$pairKey])) {
-                    $eventSpecificByPair[$pairKey] = [
-                        'green' => [],
-                        'red' => [],
-                    ];
-                }
-
-                if (isset($eventSpecificByPair[$pairKey][$flagColor][$flagId])) {
-                    continue;
-                }
-
-                $eventSpecificByPair[$pairKey][$flagColor][$flagId] = [
-                    'candidate_flag_id' => (int) ($row['candidate_flag_id'] ?? 0),
-                    'candidate_id' => $candidateId,
-                    'note' => trim((string) ($row['note'] ?? '')),
-                    'flag_id' => $flagId,
-                    'flag_slug' => (string) ($row['flag_slug'] ?? ''),
-                    'flag_name' => (string) ($row['flag_name'] ?? ''),
-                    'flag_color' => $flagColor,
-                    'default_weight' => (float) ($row['default_weight'] ?? 0),
-                    'effective_weight' => (float) ($row['effective_weight'] ?? 0),
-                ];
-            }
-        }
+        $candidateIdList = implode(',', array_map('intval', array_values($normalizedCandidateIds)));
 
         $sql = "
-    SELECT
-        cf.candidate_flag_id,
-        cf.candidate_id,
-        cf.note,
-        f.flag_id,
-        f.slug AS flag_slug,
-        f.name AS flag_name,
-        f.flag_color,
-        f.default_weight,
-        COALESCE(cf.weight_override, f.default_weight) AS effective_weight
-    FROM candidate_flags cf
-    INNER JOIN flags f
-        ON f.flag_id = cf.flag_id
-    WHERE cf.is_active = 1
-      AND f.is_active = 1
-      AND cf.candidate_id IN ({$candidateIdList})
-      AND f.flag_color IN ('green', 'red')
-    ORDER BY
-        cf.candidate_id ASC,
-        f.flag_color ASC,
-        ABS(COALESCE(cf.weight_override, f.default_weight)) DESC,
-        f.sort_order ASC,
-        f.name ASC,
-        cf.candidate_flag_id ASC
-    ";
+            SELECT
+                cf.candidate_flag_id,
+                cf.candidate_id,
+                cf.note,
+                f.flag_id,
+                f.slug AS flag_slug,
+                f.name AS flag_name,
+                f.flag_color,
+                f.default_weight,
+                COALESCE(cf.weight_override, f.default_weight) AS effective_weight
+            FROM candidate_flags cf
+            INNER JOIN flags f
+                ON f.flag_id = cf.flag_id
+            WHERE cf.is_active = 1
+              AND f.is_active = 1
+              AND cf.candidate_id IN ({$candidateIdList})
+              AND f.flag_color IN ('green', 'red')
+            ORDER BY
+                cf.candidate_id ASC,
+                f.flag_color ASC,
+                ABS(COALESCE(cf.weight_override, f.default_weight)) DESC,
+                f.sort_order ASC,
+                f.name ASC,
+                cf.candidate_flag_id ASC
+        ";
 
         $rows = $this->db->query($sql)->fetchAll();
+
+        $flagsByCandidate = [];
 
         foreach ($rows as $row) {
             $candidateId = (int) ($row['candidate_id'] ?? 0);
@@ -444,18 +357,18 @@ final class CandidateRepository
                 continue;
             }
 
-            if (!isset($globalByCandidate[$candidateId])) {
-                $globalByCandidate[$candidateId] = [
+            if (!isset($flagsByCandidate[$candidateId])) {
+                $flagsByCandidate[$candidateId] = [
                     'green' => [],
                     'red' => [],
                 ];
             }
 
-            if (isset($globalByCandidate[$candidateId][$flagColor][$flagId])) {
+            if (isset($flagsByCandidate[$candidateId][$flagColor][$flagId])) {
                 continue;
             }
 
-            $globalByCandidate[$candidateId][$flagColor][$flagId] = [
+            $flagsByCandidate[$candidateId][$flagColor][$flagId] = [
                 'candidate_flag_id' => (int) ($row['candidate_flag_id'] ?? 0),
                 'candidate_id' => $candidateId,
                 'note' => trim((string) ($row['note'] ?? '')),
@@ -468,20 +381,13 @@ final class CandidateRepository
             ];
         }
 
-        foreach ($normalizedPairs as $key => $pair) {
-            $candidateId = (int) $pair['candidate_id'];
-            $electionId = isset($pair['election_id']) ? (int) $pair['election_id'] : 0;
-            $pairKey = $candidateId . ':' . ($electionId > 0 ? $electionId : 0);
-            $eventPairKey = $candidateId . ':' . $electionId;
-
+        foreach ($normalizedCandidateIds as $candidateId) {
             foreach (['green', 'red'] as $flagColor) {
                 $selected = [];
-                $seenFlagIds = [];
 
-                if ($electionId > 0 && isset($eventSpecificByPair[$eventPairKey][$flagColor])) {
-                    foreach ($eventSpecificByPair[$eventPairKey][$flagColor] as $flagId => $row) {
+                if (isset($flagsByCandidate[$candidateId][$flagColor])) {
+                    foreach ($flagsByCandidate[$candidateId][$flagColor] as $row) {
                         $selected[] = $row;
-                        $seenFlagIds[(int) $flagId] = true;
 
                         if (count($selected) >= $limitPerColor) {
                             break;
@@ -489,24 +395,7 @@ final class CandidateRepository
                     }
                 }
 
-                if (count($selected) < $limitPerColor && isset($globalByCandidate[$candidateId][$flagColor])) {
-                    foreach ($globalByCandidate[$candidateId][$flagColor] as $flagId => $row) {
-                        $flagId = (int) $flagId;
-
-                        if (isset($seenFlagIds[$flagId])) {
-                            continue;
-                        }
-
-                        $selected[] = $row;
-                        $seenFlagIds[$flagId] = true;
-
-                        if (count($selected) >= $limitPerColor) {
-                            break;
-                        }
-                    }
-                }
-
-                $result[$pairKey][$flagColor] = $selected;
+                $result[$candidateId][$flagColor] = $selected;
             }
         }
 

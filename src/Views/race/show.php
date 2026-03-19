@@ -97,7 +97,7 @@ if (!function_exists('extract_candidate_flag_groups')) {
             $color = strtolower(trim((string) ($flag['flag_color'] ?? $flag['color'] ?? '')));
             $slug = trim((string) ($flag['flag_name'] ?? $flag['name'] ?? $flag['slug'] ?? ''));
             $weight = $flag['effective_weight'] ?? $flag['weight'] ?? $flag['default_weight'] ?? 0;
-            $description = (string) ($flag['description'] ?? $flag['flag_description'] ?? $flag['note'] ?? '');
+            $description = (string) ($flag['flag_description'] ?? $flag['note'] ?? '');
 
             if ($slug === '' || ($color !== 'green' && $color !== 'red')) {
                 continue;

@@ -69,7 +69,7 @@ final class ElectionController
      */
     private function attachCandidatePreviews(array $racesByOffice): array
     {
-        $candidatePairs = [];
+        $candidateIds = [];
 
         foreach ($racesByOffice as $officeName => $races) {
             foreach ($races as $index => $race) {
@@ -87,35 +87,26 @@ final class ElectionController
                 foreach ($candidates as $candidate) {
                     $candidateId = (int) ($candidate['candidate_id'] ?? 0);
 
-                    if ($candidateId <= 0) {
-                        continue;
+                    if ($candidateId > 0) {
+                        $candidateIds[$candidateId] = $candidateId;
                     }
-
-                    $pairKey = $candidateId . ':' . ($electionId > 0 ? $electionId : 0);
-
-                    $candidatePairs[$pairKey] = [
-                        'candidate_id' => $candidateId,
-                        'election_id' => $electionId > 0 ? $electionId : null,
-                    ];
                 }
             }
         }
 
         $previewFlagsMap = $this->candidateRepository->getCandidatePreviewReasonGroupsMap(
-            array_values($candidatePairs),
+            array_values($candidateIds),
             100
         );
 
         foreach ($racesByOffice as $officeName => $races) {
             foreach ($races as $index => $race) {
-                $electionId = (int) ($race['election_id'] ?? 0);
                 $candidates = $racesByOffice[$officeName][$index]['candidates'] ?? [];
 
                 foreach ($candidates as $candidateIndex => $candidate) {
                     $candidateId = (int) ($candidate['candidate_id'] ?? 0);
-                    $pairKey = $candidateId . ':' . ($electionId > 0 ? $electionId : 0);
 
-                    $candidates[$candidateIndex]['preview_flags'] = $previewFlagsMap[$pairKey]
+                    $candidates[$candidateIndex]['preview_flags'] = $previewFlagsMap[$candidateId]
                         ?? ['green' => [], 'red' => []];
                 }
 

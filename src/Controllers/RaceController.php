@@ -17,24 +17,12 @@ final class RaceController
 
     public function show(string $stateSlug, string $officeSlug, int $year, ?int $district = null): void
     {
-        error_log('RaceController::show reached: ' . json_encode([
-                'stateSlug' => $stateSlug,
-                'officeSlug' => $officeSlug,
-                'year' => $year,
-                'district' => $district,
-            ]));
-
         $data = $this->raceRepository->getRacePage(
             $stateSlug,
             $officeSlug,
             $year,
             $district
         );
-
-        error_log('RaceController::show result: ' . json_encode([
-                'hasData' => (bool)$data,
-                'hasRace' => !empty($data['race']),
-            ]));
 
         if (!$data || empty($data['race'])) {
             not_found($_SERVER['REQUEST_URI'] ?? '/');
@@ -56,13 +44,13 @@ final class RaceController
     private function buildPageTitle(array $race): string
     {
         $parts = [
-            trim((string)($race['state_name'] ?? '')),
-            trim((string)($race['office_name'] ?? '')),
-            isset($race['election_year']) ? (string)$race['election_year'] : '',
+            trim((string) ($race['state_name'] ?? '')),
+            trim((string) ($race['office_name'] ?? '')),
+            isset($race['election_year']) ? (string) $race['election_year'] : '',
         ];
 
-        if (($race['district_type'] ?? '') === 'congressional_district' && (int)($race['district_number'] ?? 0) > 0) {
-            $parts[] = 'District ' . (int)$race['district_number'];
+        if (($race['district_type'] ?? '') === 'congressional_district' && (int) ($race['district_number'] ?? 0) > 0) {
+            $parts[] = 'District ' . (int) $race['district_number'];
         }
 
         return trim(implode(' ', array_filter($parts))) . ' Race';
@@ -71,13 +59,13 @@ final class RaceController
     private function buildMetaDescription(array $race): string
     {
         $parts = [
-            trim((string)($race['state_name'] ?? '')),
-            trim((string)($race['office_name'] ?? '')),
-            isset($race['election_year']) ? (string)$race['election_year'] : '',
+            trim((string) ($race['state_name'] ?? '')),
+            trim((string) ($race['office_name'] ?? '')),
+            isset($race['election_year']) ? (string) $race['election_year'] : '',
         ];
 
-        if (($race['district_type'] ?? '') === 'congressional_district' && (int)($race['district_number'] ?? 0) > 0) {
-            $parts[] = 'District ' . (int)$race['district_number'];
+        if (($race['district_type'] ?? '') === 'congressional_district' && (int) ($race['district_number'] ?? 0) > 0) {
+            $parts[] = 'District ' . (int) $race['district_number'];
         }
 
         return trim(implode(' ', array_filter($parts))) . ' candidates, rankings, and election details.';
@@ -86,14 +74,14 @@ final class RaceController
     private function buildRaceCanonicalUrl(array $race): string
     {
         $path = '/races/'
-            . rawurlencode((string)($race['state_slug'] ?? ''))
+            . rawurlencode((string) ($race['state_slug'] ?? ''))
             . '/'
-            . rawurlencode((string)($race['office_slug'] ?? ''))
+            . rawurlencode((string) ($race['office_slug'] ?? ''))
             . '/'
-            . rawurlencode((string)($race['election_year'] ?? ''));
+            . rawurlencode((string) ($race['election_year'] ?? ''));
 
-        if (($race['district_type'] ?? '') === 'congressional_district' && (int)($race['district_number'] ?? 0) > 0) {
-            $path .= '/district-' . (int)$race['district_number'];
+        if (($race['district_type'] ?? '') === 'congressional_district' && (int) ($race['district_number'] ?? 0) > 0) {
+            $path .= '/district-' . (int) $race['district_number'];
         }
 
         return absolute_url($path);
