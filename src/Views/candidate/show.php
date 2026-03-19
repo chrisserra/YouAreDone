@@ -89,7 +89,7 @@ if (!function_exists('flag_color_class')) {
 
 <section class="page-section candidate-page">
     <div class="candidate-hero card">
-        <div class="candidate-hero__main">
+        <div class="candidate-hero__top">
             <div class="candidate-hero__identity">
                 <p class="eyebrow">Candidate</p>
                 <h1><?= h((string)($candidate['full_name'] ?? 'Candidate')) ?></h1>
@@ -97,8 +97,8 @@ if (!function_exists('flag_color_class')) {
                 <div class="candidate-hero__meta">
                     <?php if (!empty($candidate['party_name']) || !empty($candidate['party_code'])): ?>
                         <span class="badge">
-                            <?= h((string)($candidate['party_name'] ?: $candidate['party_code'])) ?>
-                        </span>
+                        <?= h((string)($candidate['party_name'] ?: $candidate['party_code'])) ?>
+                    </span>
                     <?php endif; ?>
 
                     <?php if (!empty($candidate['status'])): ?>
@@ -109,20 +109,14 @@ if (!function_exists('flag_color_class')) {
                         <span class="badge">Preferred: <?= h((string)$candidate['preferred_name']) ?></span>
                     <?php endif; ?>
                 </div>
-
-                <?php if (!empty($candidate['short_bio'])): ?>
-                    <p class="candidate-hero__bio"><?= nl2br(h((string)$candidate['short_bio'])) ?></p>
-                <?php elseif (!empty($candidate['summary_public'])): ?>
-                    <p class="candidate-hero__bio"><?= nl2br(h((string)$candidate['summary_public'])) ?></p>
-                <?php endif; ?>
             </div>
 
             <?php if (!empty($candidate['image_url'])): ?>
                 <div class="candidate-hero__image-wrap">
                     <img
-                        class="candidate-hero__image"
-                        src="<?= h((string)$candidate['image_url']) ?>"
-                        alt="<?= h((string)($candidate['full_name'] ?? 'Candidate')) ?>"
+                            class="candidate-hero__image"
+                            src="<?= h((string)$candidate['image_url']) ?>"
+                            alt="<?= h((string)($candidate['full_name'] ?? 'Candidate')) ?>"
                     >
                 </div>
             <?php endif; ?>
@@ -131,21 +125,34 @@ if (!function_exists('flag_color_class')) {
         <div class="candidate-score-grid">
             <div class="stat">
                 <span class="stat__label">Score</span>
-                <span class="stat__value <?= h(format_candidate_score_class($candidate['score_total'] ?? 0)) ?>">
-                    <?= h(number_format((float)($candidate['score_total'] ?? 0), 2)) ?>
+                <span class="stat__value">
+                <?= h(number_format((float)($candidate['score_total'] ?? 0), 2)) ?>
+            </span>
+            </div>
+
+            <div class="stat stat--green">
+                <span class="stat__label">Green Flags</span>
+                <span class="stat__value">
+                    <?= (int)($candidate['green_flag_count'] ?? 0) ?>
                 </span>
             </div>
 
-            <div class="stat">
-                <span class="stat__label">Green Flags</span>
-                <span class="stat__value"><?= (int)($candidate['green_flag_count'] ?? 0) ?></span>
-            </div>
-
-            <div class="stat">
+            <div class="stat stat--red">
                 <span class="stat__label">Red Flags</span>
-                <span class="stat__value"><?= (int)($candidate['red_flag_count'] ?? 0) ?></span>
+                <span class="stat__value">
+                    <?= (int)($candidate['red_flag_count'] ?? 0) ?>
+                </span>
             </div>
         </div>
+
+        <?php if (!empty($candidate['short_bio']) || !empty($candidate['summary_public'])): ?>
+            <div class="candidate-hero__summary">
+                <p class="candidate-hero__summary-label">Summary</p>
+                <p class="candidate-hero__bio">
+                    <?= nl2br(h((string)($candidate['short_bio'] ?: $candidate['summary_public']))) ?>
+                </p>
+            </div>
+        <?php endif; ?>
 
         <div class="candidate-links">
             <?php if (!empty($candidate['website_url'])): ?>
@@ -206,9 +213,9 @@ if (!function_exists('flag_color_class')) {
                             <p class="flag-card__description"><?= nl2br(h((string)$flag['flag_description'])) ?></p>
                         <?php endif; ?>
 
-                        <?php if (!empty($flag['note'])): ?>
-                            <p class="flag-card__note"><?= nl2br(h((string)$flag['note'])) ?></p>
-                        <?php endif; ?>
+<!--                        --><?php //if (!empty($flag['note'])): ?>
+<!--                            <p class="flag-card__note">--><?php //= nl2br(h((string)$flag['note'])) ?><!--</p>-->
+<!--                        --><?php //endif; ?>
                     </article>
                 <?php endforeach; ?>
             </div>

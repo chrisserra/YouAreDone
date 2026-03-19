@@ -191,7 +191,12 @@ if ($racesByOffice !== []) {
                                                 $redReasons = is_array($previewFlags['red'] ?? null) ? $previewFlags['red'] : [];
                                                 $greenCount = count($greenReasons);
                                                 $redCount = count($redReasons);
+                                                $candidateSlug = trim((string) ($candidate['slug'] ?? $candidate['candidate_slug'] ?? ''));
                                                 $candidateUrl = trim((string) ($candidate['url'] ?? ''));
+
+                                                if ($candidateUrl === '' && $candidateSlug !== '') {
+                                                    $candidateUrl = '/candidate/' . rawurlencode($candidateSlug);
+                                                }
                                                 $candidateName = trim((string) ($candidate['full_name'] ?? $candidate['name'] ?? 'Candidate'));
 
                                                 $rankLabel = match ($rank) {
@@ -209,41 +214,66 @@ if ($racesByOffice !== []) {
                                                 $hiddenAttribute = $rank > 1 ? ' data-hidden-candidate="true"' : '';
                                                 $clickableClass = $candidateUrl !== '' ? ' event-candidate--clickable' : '';
                                                 ?>
-                                                <article
-                                                        class="event-candidate event-candidate--compact<?= h($rankClass . $clickableClass) ?>"
-                                                    <?= $hiddenAttribute ?>
-                                                    <?php if ($candidateUrl !== ''): ?>
-                                                        data-href="<?= h($candidateUrl) ?>"
-                                                        tabindex="0"
-                                                        role="link"
-                                                        aria-label="View candidate <?= h($candidateName) ?>"
-                                                    <?php endif; ?>
-                                                >
-                                                    <div class="event-candidate__compact-top">
-                                                        <div class="event-candidate__compact-main">
-                                                            <h5 class="event-candidate__name"><?= h($candidateName) ?></h5>
-                                                            <div class="event-candidate__rank-row">
-                                                                <span class="event-candidate__rank-label"><?= h($rankLabel) ?></span>
+                                                <?php if ($candidateUrl !== ''): ?>
+                                                    <a
+                                                            class="event-candidate event-candidate--compact event-candidate--clickable<?= h($rankClass) ?>"
+                                                            href="<?= h($candidateUrl) ?>"
+                                                        <?= $hiddenAttribute ?>
+                                                            aria-label="View candidate <?= h($candidateName) ?>"
+                                                    >
+                                                        <div class="event-candidate__compact-top">
+                                                            <div class="event-candidate__compact-main">
+                                                                <h5 class="event-candidate__name"><?= h($candidateName) ?></h5>
+                                                                <div class="event-candidate__rank-row">
+                                                                    <span class="event-candidate__rank-label"><?= h($rankLabel) ?></span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="event-candidate__score-block">
+                                                                <span class="event-candidate__score-block-label">Score</span>
+                                                                <span class="event-candidate__score-block-value">
+                                                                    <?= h(format_candidate_score($candidate['score_total'] ?? 0)) ?>
+                                                                </span>
                                                             </div>
                                                         </div>
 
-                                                        <div class="event-candidate__score-block">
-                                                            <span class="event-candidate__score-block-label">Score</span>
-                                                            <span class="event-candidate__score-block-value">
-                                                                <?= h(format_candidate_score($candidate['score_total'] ?? 0)) ?>
+                                                        <div class="event-candidate__compact-stats">
+                                                            <span class="event-candidate__total event-candidate__total--green">
+                                                                <?= $greenCount ?> Green
+                                                            </span>
+                                                            <span class="event-candidate__total event-candidate__total--red">
+                                                                <?= $redCount ?> Red
                                                             </span>
                                                         </div>
-                                                    </div>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <article class="event-candidate event-candidate--compact<?= h($rankClass) ?>"<?= $hiddenAttribute ?>>
+                                                        <div class="event-candidate__compact-top">
+                                                            <div class="event-candidate__compact-main">
+                                                                <h5 class="event-candidate__name"><?= h($candidateName) ?></h5>
+                                                                <div class="event-candidate__rank-row">
+                                                                    <span class="event-candidate__rank-label"><?= h($rankLabel) ?></span>
+                                                                </div>
+                                                            </div>
 
-                                                    <div class="event-candidate__compact-stats">
-                                                        <span class="event-candidate__total event-candidate__total--green">
-                                                            <?= $greenCount ?> Green
-                                                        </span>
-                                                        <span class="event-candidate__total event-candidate__total--red">
-                                                            <?= $redCount ?> Red
-                                                        </span>
-                                                    </div>
-                                                </article>
+                                                            <div class="event-candidate__score-block">
+                                                                <span class="event-candidate__score-block-label">Score</span>
+                                                                <span class="event-candidate__score-block-value">
+                                                                    <?= h(format_candidate_score($candidate['score_total'] ?? 0)) ?>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="event-candidate__compact-stats">
+                                                            <span class="event-candidate__total event-candidate__total--green">
+                                                                <?= $greenCount ?> Green
+                                                            </span>
+                                                            <span class="event-candidate__total event-candidate__total--red">
+                                                                <?= $redCount ?> Red
+                                                            </span>
+                                                        </div>
+                                                    </article>
+                                                <?php endif; ?>
                                             <?php endforeach; ?>
                                         </div>
 

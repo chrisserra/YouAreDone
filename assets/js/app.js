@@ -27,6 +27,46 @@ function initClickableRows() {
     });
 }
 
+function initClickableCards() {
+    document.addEventListener('click', function (event) {
+        const card = event.target.closest('.event-candidate--clickable[data-href]');
+
+        if (!card) {
+            return;
+        }
+
+        if (event.target.closest('a, button, input, select, label')) {
+            return;
+        }
+
+        const href = card.getAttribute('data-href');
+
+        if (href) {
+            window.location.href = href;
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        const card = event.target.closest('.event-candidate--clickable[data-href]');
+
+        if (!card) {
+            return;
+        }
+
+        if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+        }
+
+        event.preventDefault();
+
+        const href = card.getAttribute('data-href');
+
+        if (href) {
+            window.location.href = href;
+        }
+    });
+}
+
 function initShareMenu() {
     const shareToggle = document.querySelector('[data-share-toggle]');
     const shareMenu = document.querySelector('[data-share-menu]');
@@ -131,46 +171,6 @@ function initRaceToggles() {
         button.textContent = isExpanded
             ? (button.dataset.showText || 'View other candidates')
             : (button.dataset.hideText || 'Hide other candidates');
-    });
-}
-
-function initClickableCards() {
-    document.addEventListener('click', function (event) {
-        const card = event.target.closest('.event-candidate--clickable[data-href]');
-
-        if (!card) {
-            return;
-        }
-
-        if (event.target.closest('a, button, input, select, label')) {
-            return;
-        }
-
-        const href = card.getAttribute('data-href');
-
-        if (href) {
-            window.location.href = href;
-        }
-    });
-
-    document.addEventListener('keydown', function (event) {
-        const card = event.target.closest('.event-candidate--clickable[data-href]');
-
-        if (!card) {
-            return;
-        }
-
-        if (event.key !== 'Enter' && event.key !== ' ') {
-            return;
-        }
-
-        event.preventDefault();
-
-        const href = card.getAttribute('data-href');
-
-        if (href) {
-            window.location.href = href;
-        }
     });
 }
 
