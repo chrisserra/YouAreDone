@@ -41,6 +41,13 @@ echo "==> Pushing to branch: $CURRENT_BRANCH"
 git push origin "$CURRENT_BRANCH"
 
 echo "==> Deploying to server..."
-ssh cserraco@68.66.224.56 "cd /home/cserraco/youaredone.org && git pull origin master"
+ssh cserraco@68.66.224.56 '
+  set -e
+  cd /home/cserraco/youaredone.org
+  git fetch origin
+  git reset --hard origin/master
+  git clean -fd
+  ./scripts/deploy.sh
+'
 
 echo "==> Done."
