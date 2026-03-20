@@ -1235,165 +1235,6 @@ p {
     margin-top: 18px;
 }
 
-.election {
-    padding: 20px;
-    border-radius: 18px;
-}
-
-.election-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 16px;
-}
-
-.election-header h2 {
-    margin: 0;
-    font-size: 1.35rem;
-    line-height: 1.2;
-}
-
-.election-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.72);
-}
-
-.candidate-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.candidate-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    padding: 14px 16px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.candidate-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    min-width: 0;
-}
-
-.candidate-right {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
-.candidate-rank {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 34px;
-    height: 34px;
-    padding: 0 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    background: rgba(59, 130, 246, 0.16);
-    color: #bfdbfe;
-}
-
-.candidate-name,
-.candidate-name a {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #f8fafc;
-    text-decoration: none;
-}
-
-.candidate-name a:hover {
-    text-decoration: underline;
-}
-
-.candidate-party {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.72);
-}
-
-.candidate-incumbent {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    background: rgba(250, 204, 21, 0.14);
-    color: #fde68a;
-}
-
-.candidate-score {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 64px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.candidate-flags {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    font-size: 13px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.candidate-score-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-}
-
-.candidate-score-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.58);
-}
-
-.candidate-flag-count {
-    display: inline-flex;
-    align-items: center;
-    padding: 5px 9px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.candidate-flag-count--green {
-    background: rgba(34, 197, 94, 0.18);
-    color: #86efac;
-    border: 1px solid rgba(34, 197, 94, 0.35);
-}
-
-.candidate-flag-count--red {
-    background: rgba(239, 68, 68, 0.18);
-    color: #fca5a5;
-    border: 1px solid rgba(239, 68, 68, 0.35);
-}
-
 .page-back {
     margin-bottom: 1rem;
 }
@@ -1405,6 +1246,204 @@ p {
 
 .page-back__button:hover {
     opacity: 1;
+}
+
+/* =========================
+   Footer polish
+========================= */
+
+.site-footer {
+    border-top: 1px solid var(--border);
+    margin-top: 44px;
+}
+
+.site-footer__inner {
+    max-width: var(--content-width);
+    margin: 0 auto;
+    padding: 18px 24px 28px;
+    color: var(--text-soft);
+    font-size: 0.9rem;
+}
+
+/* =========================
+   Browse by Office
+========================= */
+
+.office-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.office-card {
+    min-height: 92px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    color: var(--text);
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.office-card:hover {
+    text-decoration: none;
+    color: #ffffff;
+    border-color: rgba(96, 165, 250, 0.32);
+    background: linear-gradient(180deg, rgba(37, 99, 235, 0.14), rgba(15, 23, 42, 0.96));
+}
+
+.office-card__name {
+    color: inherit;
+}
+
+/* =========================
+   State Table
+========================= */
+
+.state-table-wrap {
+    padding: 18px;
+    overflow: hidden;
+}
+
+.state-table-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.state-table-tools__search,
+.state-table-tools__filter {
+    display: grid;
+    gap: 6px;
+}
+
+.state-table-tools__search {
+    flex: 1 1 320px;
+    min-width: min(100%, 320px);
+}
+
+.state-table-tools__filter {
+    flex: 0 1 220px;
+    min-width: 180px;
+}
+
+.state-table-tools__search span,
+.state-table-tools__filter span {
+    color: var(--text-soft);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.state-table-tools__input,
+.state-table-tools__select {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.72);
+    color: var(--text);
+    font: inherit;
+    outline: none;
+}
+
+.state-table-tools__input::placeholder {
+    color: #8ba0ba;
+}
+
+.state-table-tools__select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image:
+            linear-gradient(45deg, transparent 50%, #8ba0ba 50%),
+            linear-gradient(135deg, #8ba0ba 50%, transparent 50%);
+    background-position:
+            calc(100% - 18px) calc(50% - 3px),
+            calc(100% - 12px) calc(50% - 3px);
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+    padding-right: 34px;
+}
+
+.state-table-tools__input:focus,
+.state-table-tools__select:focus {
+    border-color: rgba(96, 165, 250, 0.42);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.table-scroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.state-table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+}
+
+.state-table thead th {
+    padding: 0 14px 12px;
+    border-bottom: 1px solid var(--border-strong);
+    text-align: left;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+.state-table__sort {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-soft);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.state-table__sort:hover,
+.state-table__sort[aria-pressed="true"] {
+    color: var(--text-strong);
+}
+
+.state-table tbody td {
+    padding: 15px 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.45;
+    vertical-align: middle;
+}
+
+.state-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.state-table tbody tr:hover td {
+    background: rgba(30, 41, 59, 0.34);
+}
+
+.state-table__state {
+    color: var(--text-strong);
+    font-weight: 700;
+}
+
+.state-table tbody td:nth-child(2) {
+    white-space: nowrap;
+}
+
+.state-table tbody td:nth-child(4) {
+    color: var(--text);
 }
 
 /* =========================
@@ -1504,8 +1543,6 @@ p {
     }
 
     .event-candidate__compact-top,
-    .candidate-row,
-    .election-header,
     .candidate-hero__top,
     .flag-card__header,
     .history-card__main {
@@ -1515,10 +1552,6 @@ p {
 
     .event-candidate__score-block {
         justify-items: start;
-    }
-
-    .candidate-right {
-        justify-content: flex-start;
     }
 
     .event-candidate,
