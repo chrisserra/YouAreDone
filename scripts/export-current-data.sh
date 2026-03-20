@@ -67,6 +67,11 @@ MYSQL_PWD="$DUMP_PASS" "$MYSQLDUMP_BIN" \
   candidates \
   election_candidates \
   candidate_flags \
+  events \
+  flag_categories \
+  candidate_sources \
+  candidate_updates \
+  election_candidate_flags \
 > "$OUTPUT_FILE"
 
 echo "Exported current data to $OUTPUT_FILE"
