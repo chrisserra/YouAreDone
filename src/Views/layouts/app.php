@@ -8,7 +8,7 @@ declare(strict_types=1);
 /** @var string|null $canonicalUrl */
 /** @var string|null $ogImage */
 
-$version = 10;
+$version = 12;
 
 $pageTitle = $pageTitle ?? 'YouAreDone.org';
 $metaDescription = $metaDescription ?? 'Track upcoming election events, watched races, and candidate accountability.';
