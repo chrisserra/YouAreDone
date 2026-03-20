@@ -1838,6 +1838,63 @@ p {
 }
 
 /* =========================
+   Home Card Spacing Fixes
+========================= */
+
+.hero-section {
+    padding: 28px;
+}
+
+.calendar-section {
+    padding: 24px;
+}
+
+#browse-by-state {
+    padding: 24px;
+}
+
+.calendar-section .section-header,
+#browse-by-state .section-header {
+    padding: 0;
+}
+
+.calendar-grid-wrap {
+    margin-top: 1rem;
+}
+
+.state-filters {
+    margin-top: 1.25rem;
+}
+
+#browse-by-state .table-wrap {
+    margin-top: 1rem;
+}
+
+/* Make the calendar sit nicely inside the card */
+.calendar-weekdays,
+.calendar-grid {
+    min-width: 0;
+}
+
+.calendar-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+/* Keep day cells from feeling too cramped against the card edge */
+.calendar-day {
+    min-height: 148px;
+}
+
+/* Responsive spacing */
+@media (max-width: 767px) {
+    .hero-section,
+    .calendar-section,
+    #browse-by-state {
+        padding: 18px;
+    }
+}
+
+/* =========================
    Responsive
 ========================= */
 
@@ -1863,7 +1920,8 @@ p {
     }
 
     .calendar-day {
-        min-height: 135px;
+        min-height: 120px;
+        padding: 10px;
     }
 
     .calendar-event-link,

@@ -5,7 +5,7 @@ namespace App\Core;
 
 class View
 {
-    public static function render(string $view, array $data = [], ?string $layout = null): void
+    public static function render(string $view, array $data = [], ?string $layout = 'layouts/app'): void
     {
         $viewFile = VIEW_PATH . '/' . $view . '.php';
 

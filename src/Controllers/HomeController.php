@@ -23,8 +23,21 @@ class HomeController
     {
         $bounds = $this->elections->getCalendarBounds();
 
+        $requestedMonth = $_GET['month'] ?? null;
+
+        if ($requestedMonth === null) {
+            $requestUri = (string)($_SERVER['REQUEST_URI'] ?? '');
+            $queryString = (string)(parse_url($requestUri, PHP_URL_QUERY) ?? '');
+
+            if ($queryString !== '') {
+                $queryParams = [];
+                parse_str($queryString, $queryParams);
+                $requestedMonth = $queryParams['month'] ?? null;
+            }
+        }
+
         $selectedMonth = $this->resolveSelectedMonth(
-            $_GET['month'] ?? null,
+            $requestedMonth,
             $bounds['min_month'] ?? null,
             $bounds['max_month'] ?? null
         );
@@ -90,7 +103,7 @@ class HomeController
             'calendarWeeks' => $calendarWeeks,
             'states' => $states,
             'browseOffices' => $this->browseOffices(),
-        ]);
+        ], 'layouts/app');
     }
 
     private function resolveSelectedMonth(
@@ -165,12 +178,26 @@ class HomeController
         $cards = [];
 
         foreach ($rows as $row) {
+            $stateSlug = (string) ($row['state_slug'] ?? '');
+            $electionTypeSlug = (string) ($row['election_type_slug'] ?? '');
+            $nextElectionDate = $row['next_election_date'] ?: null;
+            $electionType = (string) ($row['election_type'] ?? '');
+
+            $eventUrl = null;
+            if ($stateSlug !== '' && $electionTypeSlug !== '' && $nextElectionDate) {
+                $eventUrl = $this->buildEventUrl([
+                    'state_slug' => $stateSlug,
+                    'election_type_slug' => $electionTypeSlug,
+                    'election_date' => (string) $nextElectionDate,
+                ]);
+            }
+
             $cards[] = [
                 'state_name' => (string) ($row['state_name'] ?? ''),
-                'state_slug' => (string) ($row['state_slug'] ?? ''),
-                'state_url' => '/races/' . rawurlencode((string) ($row['state_slug'] ?? '')) . '/senate/' . date('Y'),
-                'next_election_date' => $row['next_election_date'] ?: null,
-                'next_election_label' => $this->buildStateElectionLabel($row),
+                'state_slug' => $stateSlug,
+                'next_election_date' => $nextElectionDate,
+                'election_type_label' => $electionType !== '' ? $this->formatElectionType($electionType) : '',
+                'event_url' => $eventUrl,
                 'offices' => $this->parseOffices((string) ($row['offices'] ?? '')),
             ];
         }
