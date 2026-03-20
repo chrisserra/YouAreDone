@@ -81,26 +81,7 @@ if (!function_exists('office_bullet_items')) {
     }
 }
 
-$electionTypeOptions = [];
-$officeOptions = [];
 
-foreach ($states as $state) {
-    $typeLabel = trim((string)($state['election_type_label'] ?? ''));
-    if ($typeLabel !== '') {
-        $electionTypeOptions[$typeLabel] = $typeLabel;
-    }
-
-    $stateOffices = is_array($state['offices'] ?? null) ? $state['offices'] : [];
-    foreach ($stateOffices as $office) {
-        $office = trim((string)$office);
-        if ($office !== '') {
-            $officeOptions[$office] = $office;
-        }
-    }
-}
-
-ksort($electionTypeOptions, SORT_NATURAL | SORT_FLAG_CASE);
-ksort($officeOptions, SORT_NATURAL | SORT_FLAG_CASE);
 
 $weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -259,108 +240,134 @@ foreach ($calendarWeeks as $week) {
             <p class="eyebrow">Browse by State</p>
             <h2>Find the next tracked election in each state</h2>
             <p class="section-copy">
-                Use the table below to jump into states with tracked election activity.
+                Search, sort, and filter states to jump into tracked election events.
             </p>
         </div>
     </div>
 
-    <form class="state-filters" method="get" action="#browse-by-state" onsubmit="return false;">
-        <label>
-            <span>Election Type</span>
-            <select id="state-election-type-filter">
-                <option value="">All election types</option>
-                <?php foreach ($electionTypeOptions as $label): ?>
-                    <option value="<?= h($label) ?>"><?= h($label) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </label>
+    <?php
+    $electionTypeOptions = [];
+    $officeOptions = [];
 
-        <label>
-            <span>Office</span>
-            <select id="state-office-filter">
-                <option value="">All offices</option>
-                <?php foreach ($officeOptions as $office): ?>
-                    <option value="<?= h($office) ?>"><?= h($office) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </label>
-    </form>
-
-    <div class="table-wrap">
-        <table class="state-table">
-            <thead>
-            <tr>
-                <th>State</th>
-                <th>Next Election</th>
-                <th>Type</th>
-                <th>Tracked Offices</th>
-                <th>View</th>
-            </tr>
-            </thead>
-            <tbody id="state-table-body">
-            <?php if ($states === []): ?>
-                <tr>
-                    <td colspan="5">No state election data is available yet.</td>
-                </tr>
-            <?php else: ?>
-                <?php foreach ($states as $state): ?>
-                    <?php
-                    $stateName = trim((string)($state['state_name'] ?? ''));
-                    $eventUrl = $state['event_url'] ?? null;
-                    $electionTypeLabel = trim((string)($state['election_type_label'] ?? ''));
-                    $offices = is_array($state['offices'] ?? null) ? $state['offices'] : [];
-                    ?>
-                    <tr
-                            data-election-type="<?= h($electionTypeLabel) ?>"
-                            data-offices="<?= h(strtolower(implode('|', $offices))) ?>"
-                    >
-                        <td><?= h($stateName) ?></td>
-                        <td><?= h(format_display_date($state['next_election_date'] ?? null)) ?></td>
-                        <td><?= h($electionTypeLabel !== '' ? $electionTypeLabel : '—') ?></td>
-                        <td>
-                            <?php if ($offices !== []): ?>
-                                <?= h(format_office_list($offices)) ?>
-                            <?php else: ?>
-                                —
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <?php if ($eventUrl): ?>
-                                <a class="table-link" href="<?= h((string)$eventUrl) ?>">View races</a>
-                            <?php else: ?>
-                                <span class="table-link is-disabled">Unavailable</span>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</section>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const electionTypeFilter = document.getElementById('state-election-type-filter');
-        const officeFilter = document.getElementById('state-office-filter');
-        const rows = Array.from(document.querySelectorAll('#state-table-body tr[data-election-type]'));
-
-        function applyStateFilters() {
-            const selectedType = (electionTypeFilter?.value || '').trim().toLowerCase();
-            const selectedOffice = (officeFilter?.value || '').trim().toLowerCase();
-
-            rows.forEach((row) => {
-                const rowType = (row.getAttribute('data-election-type') || '').trim().toLowerCase();
-                const rowOffices = (row.getAttribute('data-offices') || '').trim().toLowerCase();
-
-                const typeMatch = selectedType === '' || rowType === selectedType;
-                const officeMatch = selectedOffice === '' || rowOffices.includes(selectedOffice);
-
-                row.style.display = typeMatch && officeMatch ? '' : 'none';
-            });
+    foreach ($states as $state) {
+        $typeLabel = trim((string)($state['election_type_label'] ?? ''));
+        if ($typeLabel !== '') {
+            $electionTypeOptions[$typeLabel] = $typeLabel;
         }
 
-        electionTypeFilter?.addEventListener('change', applyStateFilters);
-        officeFilter?.addEventListener('change', applyStateFilters);
-    });
-</script>
+        $stateOffices = is_array($state['offices'] ?? null) ? $state['offices'] : [];
+        foreach ($stateOffices as $office) {
+            $office = trim((string)$office);
+            if ($office !== '') {
+                $officeOptions[$office] = $office;
+            }
+        }
+    }
+
+    ksort($electionTypeOptions, SORT_NATURAL | SORT_FLAG_CASE);
+    ksort($officeOptions, SORT_NATURAL | SORT_FLAG_CASE);
+    ?>
+
+    <div class="state-table-wrap">
+        <div class="state-table-tools">
+            <label class="state-table-tools__search">
+                <span>Search states</span>
+                <input
+                        type="search"
+                        id="state-table-search"
+                        class="state-table-tools__input"
+                        placeholder="Search by state, election type, or office"
+                >
+            </label>
+
+            <label class="state-table-tools__filter">
+                <span>Election type</span>
+                <select id="state-table-type-filter" class="state-table-tools__select">
+                    <option value="">All election types</option>
+                    <?php foreach ($electionTypeOptions as $label): ?>
+                        <option value="<?= h($label) ?>"><?= h($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+
+            <label class="state-table-tools__filter">
+                <span>Office</span>
+                <select id="state-table-office-filter" class="state-table-tools__select">
+                    <option value="">All offices</option>
+                    <?php foreach ($officeOptions as $office): ?>
+                        <option value="<?= h($office) ?>"><?= h($office) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+        </div>
+
+        <div class="table-scroll">
+            <table id="state-table" class="state-table">
+                <thead>
+                <tr>
+                    <th>
+                        <button type="button" class="state-table__sort" data-sort-key="state" aria-pressed="false">
+                            State
+                        </button>
+                    </th>
+                    <th>
+                        <button type="button" class="state-table__sort" data-sort-key="date" aria-pressed="true">
+                            Next Election
+                        </button>
+                    </th>
+                    <th>
+                        <button type="button" class="state-table__sort" data-sort-key="type" aria-pressed="false">
+                            Type
+                        </button>
+                    </th>
+                    <th>
+                        <button type="button" class="state-table__sort" data-sort-key="offices" aria-pressed="false">
+                            Tracked Offices
+                        </button>
+                    </th>
+                    <th>View</th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php if ($states === []): ?>
+                    <tr>
+                        <td colspan="5">No state election data is available yet.</td>
+                    </tr>
+                <?php else: ?>
+                    <?php foreach ($states as $state): ?>
+                        <?php
+                        $stateName = trim((string)($state['state_name'] ?? ''));
+                        $electionTypeLabel = trim((string)($state['election_type_label'] ?? ''));
+                        $nextElectionDate = $state['next_election_date'] ?? null;
+                        $eventUrl = $state['event_url'] ?? null;
+                        $offices = is_array($state['offices'] ?? null) ? $state['offices'] : [];
+                        $officeList = format_office_list($offices);
+                        $dateSortValue = $nextElectionDate ? (string)$nextElectionDate : '9999-12-31';
+                        $officesSortValue = strtolower(implode('|', $offices));
+                        ?>
+                        <tr
+                                data-href="<?= h((string)($eventUrl ?? '')) ?>"
+                                data-state="<?= h($stateName) ?>"
+                                data-date="<?= h($dateSortValue) ?>"
+                                data-type="<?= h($electionTypeLabel) ?>"
+                                data-offices="<?= h($officesSortValue) ?>"
+                        >
+                            <td class="state-table__state"><?= h($stateName) ?></td>
+                            <td><?= h(format_display_date($nextElectionDate)) ?></td>
+                            <td><?= h($electionTypeLabel !== '' ? $electionTypeLabel : '—') ?></td>
+                            <td><?= h($officeList !== '' ? $officeList : '—') ?></td>
+                            <td>
+                                <?php if ($eventUrl): ?>
+                                    <a class="table-link" href="<?= h((string)$eventUrl) ?>">View races</a>
+                                <?php else: ?>
+                                    <span class="table-link is-disabled">Unavailable</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>

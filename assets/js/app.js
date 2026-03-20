@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initStateTable();
     initClickableRows();
     initClickableCards();
+    initCalendarOverflow();
 });
 
 function initClickableRows() {
@@ -15,7 +16,7 @@ function initClickableRows() {
             return;
         }
 
-        if (event.target.closest('a, button, input, select, label')) {
+        if (event.target.closest('a, button, input, select, label, summary, details')) {
             return;
         }
 
@@ -35,7 +36,7 @@ function initClickableCards() {
             return;
         }
 
-        if (event.target.closest('a, button, input, select, label')) {
+        if (event.target.closest('a, button, input, select, label, summary, details')) {
             return;
         }
 
@@ -315,4 +316,48 @@ function initStateTable() {
     }
 
     renderTable();
+}
+
+function initCalendarOverflow() {
+    const overflowItems = Array.from(document.querySelectorAll('.calendar-overflow'));
+
+    if (overflowItems.length === 0) {
+        return;
+    }
+
+    overflowItems.forEach(function (detailsEl) {
+        detailsEl.addEventListener('toggle', function () {
+            if (!detailsEl.open) {
+                return;
+            }
+
+            overflowItems.forEach(function (otherEl) {
+                if (otherEl !== detailsEl) {
+                    otherEl.open = false;
+                }
+            });
+        });
+    });
+
+    document.addEventListener('click', function (event) {
+        overflowItems.forEach(function (detailsEl) {
+            if (!detailsEl.open) {
+                return;
+            }
+
+            if (!detailsEl.contains(event.target)) {
+                detailsEl.open = false;
+            }
+        });
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') {
+            return;
+        }
+
+        overflowItems.forEach(function (detailsEl) {
+            detailsEl.open = false;
+        });
+    });
 }
