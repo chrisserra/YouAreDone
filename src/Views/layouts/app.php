@@ -62,6 +62,10 @@ $emailShareUrl = 'mailto:?subject=' . $emailSubject . '&body=' . $emailBody;
             referrerpolicy="no-referrer"
     >
     <link rel="stylesheet" href="/assets/css/app.css?v=<?= $version ?>">
+
+    <script>
+        window.youAreDonePlausibleDomain = 'youaredone.org';
+    </script>
 </head>
 <body class="site-body">
 

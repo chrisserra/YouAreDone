@@ -426,10 +426,22 @@ function initCookieConsent() {
 
     function hideBanner() {
         banner.hidden = true;
+        syncSettingsLinkVisibility();
     }
 
     function showBanner() {
         banner.hidden = false;
+        syncSettingsLinkVisibility();
+    }
+
+    const settingsLink = document.querySelector('.cookie-settings-link');
+
+    function syncSettingsLinkVisibility() {
+        if (!settingsLink) {
+            return;
+        }
+
+        settingsLink.hidden = !banner.hidden;
     }
 
     function openModal() {
@@ -459,9 +471,17 @@ function initCookieConsent() {
     function applyConsent(consent) {
         syncUiFromConsent(consent);
 
-        // Placeholder for future optional script loading.
-        // Example:
-        // if (consent.categories.analytics) { loadAnalytics(); }
+        const hasAnalyticsConsent = !!(consent && consent.categories && consent.categories.analytics);
+
+        document.documentElement.dataset.cookieAnalytics = hasAnalyticsConsent ? 'granted' : 'denied';
+
+        if (hasAnalyticsConsent) {
+            loadPlausibleAnalytics();
+        }
+
+        document.dispatchEvent(new CustomEvent('youaredone:cookie-consent-updated', {
+            detail: consent
+        }));
     }
 
     function saveAndApply(consent) {
@@ -538,4 +558,27 @@ function initCookieConsent() {
             return !!(consent && consent.categories && consent.categories.analytics);
         }
     };
+
+    syncSettingsLinkVisibility();
+
+    function loadPlausibleAnalytics() {
+        if (window.__youAreDonePlausibleLoaded) {
+            return;
+        }
+
+        const domain = window.youAreDonePlausibleDomain || '';
+
+        if (!domain) {
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.defer = true;
+        script.setAttribute('data-domain', domain);
+        script.src = 'https://plausible.io/js/script.js';
+
+        document.head.appendChild(script);
+
+        window.__youAreDonePlausibleLoaded = true;
+    }
 }
