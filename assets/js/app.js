@@ -475,6 +475,23 @@ function initCookieConsent() {
 
         document.documentElement.dataset.cookieAnalytics = hasAnalyticsConsent ? 'granted' : 'denied';
 
+        if (typeof window.gtag === 'function') {
+            window.gtag('consent', 'update', {
+                analytics_storage: hasAnalyticsConsent ? 'granted' : 'denied',
+                ad_storage: 'denied',
+                ad_user_data: 'denied',
+                ad_personalization: 'denied'
+            });
+
+            if (hasAnalyticsConsent) {
+                window.gtag('event', 'page_view', {
+                    page_title: document.title,
+                    page_location: window.location.href,
+                    page_path: window.location.pathname + window.location.search
+                });
+            }
+        }
+
         document.dispatchEvent(new CustomEvent('youaredone:cookie-consent-updated', {
             detail: consent
         }));

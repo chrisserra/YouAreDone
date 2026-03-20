@@ -8,7 +8,7 @@ declare(strict_types=1);
 /** @var string|null $canonicalUrl */
 /** @var string|null $ogImage */
 
-$version = 24;
+$version = 25;
 
 $pageTitle = $pageTitle ?? 'YouAreDone.org';
 $metaDescription = $metaDescription ?? 'Track upcoming election events, watched races, and candidate accountability.';
@@ -63,11 +63,24 @@ $emailShareUrl = 'mailto:?subject=' . $emailSubject . '&body=' . $emailBody;
     >
     <link rel="stylesheet" href="/assets/css/app.css?v=<?= $version ?>">
 
-    <!-- Privacy-friendly analytics by Plausible -->
-    <script defer src="https://plausible.io/js/pa-Llp8avrafSD8Rr04lOwWY.js"></script>
-
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-8ESP9QJ9LH"></script>
     <script>
-        window.youAreDonePlausibleDomain = 'youaredone.org';
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){ dataLayer.push(arguments); }
+
+        gtag('consent', 'default', {
+            analytics_storage: 'denied',
+            ad_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied'
+        });
+
+        gtag('js', new Date());
+
+        gtag('config', 'G-8ESP9QJ9LH', {
+            send_page_view: false
+        });
     </script>
 </head>
 <body class="site-body">
