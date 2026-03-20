@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initClickableRows();
     initClickableCards();
     initCalendarOverflow();
+    initCookieConsent();
 });
 
 function initClickableRows() {
@@ -360,4 +361,181 @@ function initCalendarOverflow() {
             detailsEl.open = false;
         });
     });
+}
+
+function initCookieConsent() {
+    const storageKey = 'youaredone_cookie_consent';
+    const consentVersion = 1;
+
+    const banner = document.querySelector('[data-cookie-banner]');
+    const modal = document.querySelector('[data-cookie-modal]');
+    const analyticsToggle = document.querySelector('[data-cookie-analytics-toggle]');
+
+    const acceptButtons = document.querySelectorAll('[data-cookie-accept-all]');
+    const rejectButtons = document.querySelectorAll('[data-cookie-reject-all]');
+    const openSettingsButtons = document.querySelectorAll('[data-cookie-open-settings]');
+    const savePreferencesButton = document.querySelector('[data-cookie-save-preferences]');
+    const closeModalButtons = document.querySelectorAll('[data-cookie-close-modal]');
+
+    if (!banner || !modal) {
+        return;
+    }
+
+    function getStoredConsent() {
+        try {
+            const raw = window.localStorage.getItem(storageKey);
+
+            if (!raw) {
+                return null;
+            }
+
+            const parsed = JSON.parse(raw);
+
+            if (!parsed || typeof parsed !== 'object') {
+                return null;
+            }
+
+            if (parsed.version !== consentVersion) {
+                return null;
+            }
+
+            return parsed;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function storeConsent(consent) {
+        try {
+            window.localStorage.setItem(storageKey, JSON.stringify(consent));
+        } catch (error) {
+            // Ignore storage failures.
+        }
+    }
+
+    function buildConsent(analyticsEnabled) {
+        return {
+            version: consentVersion,
+            timestamp: new Date().toISOString(),
+            categories: {
+                necessary: true,
+                analytics: !!analyticsEnabled
+            }
+        };
+    }
+
+    function hideBanner() {
+        banner.hidden = true;
+    }
+
+    function showBanner() {
+        banner.hidden = false;
+    }
+
+    function openModal() {
+        modal.hidden = false;
+        document.body.classList.add('cookie-modal-open');
+
+        if (analyticsToggle) {
+            window.setTimeout(function () {
+                analyticsToggle.focus();
+            }, 0);
+        }
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        document.body.classList.remove('cookie-modal-open');
+    }
+
+    function syncUiFromConsent(consent) {
+        const analyticsEnabled = !!(consent && consent.categories && consent.categories.analytics);
+
+        if (analyticsToggle) {
+            analyticsToggle.checked = analyticsEnabled;
+        }
+    }
+
+    function applyConsent(consent) {
+        syncUiFromConsent(consent);
+
+        // Placeholder for future optional script loading.
+        // Example:
+        // if (consent.categories.analytics) { loadAnalytics(); }
+    }
+
+    function saveAndApply(consent) {
+        storeConsent(consent);
+        applyConsent(consent);
+        hideBanner();
+        closeModal();
+    }
+
+    function handleAcceptAll() {
+        saveAndApply(buildConsent(true));
+    }
+
+    function handleRejectAll() {
+        saveAndApply(buildConsent(false));
+    }
+
+    function handleSavePreferences() {
+        const analyticsEnabled = analyticsToggle ? analyticsToggle.checked : false;
+        saveAndApply(buildConsent(analyticsEnabled));
+    }
+
+    acceptButtons.forEach(function (button) {
+        button.addEventListener('click', handleAcceptAll);
+    });
+
+    rejectButtons.forEach(function (button) {
+        button.addEventListener('click', handleRejectAll);
+    });
+
+    openSettingsButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            const currentConsent = getStoredConsent();
+            syncUiFromConsent(currentConsent || buildConsent(false));
+            openModal();
+        });
+    });
+
+    closeModalButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            closeModal();
+        });
+    });
+
+    if (savePreferencesButton) {
+        savePreferencesButton.addEventListener('click', handleSavePreferences);
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !modal.hidden) {
+            closeModal();
+        }
+    });
+
+    const storedConsent = getStoredConsent();
+
+    if (storedConsent) {
+        applyConsent(storedConsent);
+        hideBanner();
+    } else {
+        syncUiFromConsent(buildConsent(false));
+        showBanner();
+    }
+
+    window.YouAreDoneCookieConsent = {
+        getConsent: getStoredConsent,
+        openSettings: function () {
+            const currentConsent = getStoredConsent();
+            syncUiFromConsent(currentConsent || buildConsent(false));
+            openModal();
+        },
+        hasAnalyticsConsent: function () {
+            const consent = getStoredConsent();
+            return !!(consent && consent.categories && consent.categories.analytics);
+        }
+    };
 }

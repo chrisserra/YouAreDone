@@ -239,6 +239,310 @@ p {
 }
 
 /* =========================
+   Cookie Consent
+========================= */
+
+.cookie-banner {
+    position: fixed;
+    left: 24px;
+    right: 24px;
+    bottom: 24px;
+    z-index: 120;
+}
+
+.cookie-banner__inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.97);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(10px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+}
+
+.cookie-banner__content {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.cookie-banner__title {
+    font-size: 1.05rem;
+    line-height: 1.2;
+}
+
+.cookie-banner__text {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+
+.cookie-banner__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.cookie-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 130;
+}
+
+.cookie-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.7);
+    backdrop-filter: blur(3px);
+}
+
+.cookie-modal__dialog {
+    position: relative;
+    z-index: 1;
+    width: min(680px, calc(100vw - 32px));
+    margin: min(8vh, 64px) auto 24px;
+    padding: 22px;
+}
+
+.cookie-modal__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.cookie-modal__close {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.72);
+    color: var(--text-strong);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.cookie-modal__close:hover {
+    background: rgba(30, 41, 59, 0.86);
+    border-color: rgba(147, 197, 253, 0.4);
+}
+
+.cookie-modal__body {
+    margin-top: 18px;
+    display: grid;
+    gap: 18px;
+}
+
+.cookie-modal__copy {
+    color: var(--text-muted);
+}
+
+.cookie-settings {
+    display: grid;
+    gap: 14px;
+}
+
+.cookie-setting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.cookie-setting__text {
+    min-width: 0;
+}
+
+.cookie-setting__text h3 {
+    font-size: 1rem;
+    line-height: 1.25;
+}
+
+.cookie-setting__text p {
+    margin-top: 6px;
+    color: var(--text-soft);
+    font-size: 0.93rem;
+    line-height: 1.5;
+}
+
+.cookie-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    cursor: pointer;
+}
+
+.cookie-toggle input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.cookie-toggle__slider {
+    position: relative;
+    width: 48px;
+    height: 28px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.28);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.cookie-toggle__slider::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+    transition: transform 0.15s ease;
+}
+
+.cookie-toggle input:checked + .cookie-toggle__slider {
+    background: rgba(37, 99, 235, 0.78);
+    border-color: rgba(96, 165, 250, 0.78);
+}
+
+.cookie-toggle input:checked + .cookie-toggle__slider::after {
+    transform: translateX(20px);
+}
+
+.cookie-toggle input:disabled + .cookie-toggle__slider {
+    background: rgba(34, 197, 94, 0.22);
+    border-color: rgba(34, 197, 94, 0.38);
+}
+
+.cookie-toggle__label {
+    color: var(--text-muted);
+    font-size: 0.86rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.cookie-modal__footer {
+    margin-top: 22px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.cookie-settings-link {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 110;
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.82);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.cookie-settings-link:hover {
+    color: #ffffff;
+    border-color: rgba(147, 197, 253, 0.42);
+    background: rgba(30, 41, 59, 0.92);
+}
+
+.cookie-modal-open {
+    overflow: hidden;
+}
+
+@media (max-width: 991px) {
+    .cookie-banner {
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+    }
+
+    .cookie-banner__inner {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .cookie-banner__actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 767px) {
+    .cookie-banner {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+    }
+
+    .cookie-banner__inner {
+        padding: 16px;
+        gap: 14px;
+    }
+
+    .cookie-banner__title {
+        font-size: 1rem;
+    }
+
+    .cookie-banner__text {
+        font-size: 0.9rem;
+    }
+
+    .cookie-banner__actions,
+    .cookie-modal__footer {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .cookie-modal__dialog {
+        width: calc(100vw - 20px);
+        margin: 10px auto;
+        padding: 18px;
+    }
+
+    .cookie-setting {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cookie-toggle {
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .cookie-settings-link {
+        right: 12px;
+        bottom: 12px;
+        font-size: 0.78rem;
+    }
+}
+
+/* =========================
    Stats
 ========================= */
 
