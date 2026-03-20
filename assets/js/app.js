@@ -475,10 +475,6 @@ function initCookieConsent() {
 
         document.documentElement.dataset.cookieAnalytics = hasAnalyticsConsent ? 'granted' : 'denied';
 
-        if (hasAnalyticsConsent) {
-            loadPlausibleAnalytics();
-        }
-
         document.dispatchEvent(new CustomEvent('youaredone:cookie-consent-updated', {
             detail: consent
         }));
@@ -560,25 +556,4 @@ function initCookieConsent() {
     };
 
     syncSettingsLinkVisibility();
-
-    function loadPlausibleAnalytics() {
-        if (window.__youAreDonePlausibleLoaded) {
-            return;
-        }
-
-        const domain = window.youAreDonePlausibleDomain || '';
-
-        if (!domain) {
-            return;
-        }
-
-        const script = document.createElement('script');
-        script.defer = true;
-        script.setAttribute('data-domain', domain);
-        script.src = 'https://plausible.io/js/script.js';
-
-        document.head.appendChild(script);
-
-        window.__youAreDonePlausibleLoaded = true;
-    }
 }

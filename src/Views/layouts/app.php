@@ -8,7 +8,7 @@ declare(strict_types=1);
 /** @var string|null $canonicalUrl */
 /** @var string|null $ogImage */
 
-$version = 23;
+$version = 24;
 
 $pageTitle = $pageTitle ?? 'YouAreDone.org';
 $metaDescription = $metaDescription ?? 'Track upcoming election events, watched races, and candidate accountability.';
@@ -62,6 +62,9 @@ $emailShareUrl = 'mailto:?subject=' . $emailSubject . '&body=' . $emailBody;
             referrerpolicy="no-referrer"
     >
     <link rel="stylesheet" href="/assets/css/app.css?v=<?= $version ?>">
+
+    <!-- Privacy-friendly analytics by Plausible -->
+    <script defer src="https://plausible.io/js/pa-Llp8avrafSD8Rr04lOwWY.js"></script>
 
     <script>
         window.youAreDonePlausibleDomain = 'youaredone.org';
