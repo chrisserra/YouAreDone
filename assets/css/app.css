@@ -437,7 +437,7 @@ p {
 .hero-section {
     position: relative;
     overflow: hidden;
-    padding: 28px;
+    padding: 22px;
 }
 
 .home-hero::before {
@@ -750,6 +750,10 @@ p {
     padding: 22px;
 }
 
+.card#election-calendar,.card#browse-by-state {
+    margin-top: 24px;
+}
+
 .state-filters {
     display: flex;
     flex-wrap: wrap;
@@ -957,12 +961,30 @@ p {
     font-weight: 700;
 }
 
-.state-table td:nth-child(2) {
-    white-space: nowrap;
+.state-table th:nth-child(1),
+.state-table td:nth-child(1) {
+    width: 18%;
 }
 
+.state-table th:nth-child(2),
+.state-table td:nth-child(2) {
+    width: 20%;
+}
+
+.state-table th:nth-child(3),
+.state-table td:nth-child(3) {
+    width: 16%;
+}
+
+.state-table th:nth-child(4),
 .state-table td:nth-child(4) {
-    color: var(--text);
+    width: 34%;
+}
+
+.state-table th:nth-child(5),
+.state-table td:nth-child(5) {
+    width: 12%;
+    white-space: nowrap;
 }
 
 .table-link {
