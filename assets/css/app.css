@@ -804,7 +804,7 @@ p {
 
 .state-table-tools {
     display: grid;
-    grid-template-columns: minmax(260px, 1.4fr) minmax(180px, 0.8fr) minmax(180px, 0.8fr);
+    grid-template-columns: minmax(280px, 1.5fr) minmax(180px, 1fr) minmax(180px, 1fr);
     gap: 12px;
     align-items: end;
     margin-bottom: 16px;
@@ -1782,6 +1782,16 @@ p {
    Responsive
 ========================= */
 
+@media (max-width: 1200px) {
+    .state-table-tools {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .state-table-tools__search {
+        grid-column: 1 / -1;
+    }
+}
+
 @media (max-width: 991px) {
     .site-header__inner {
         padding-left: 16px;
@@ -1812,14 +1822,6 @@ p {
 
     .calendar-day {
         min-height: 96px;
-    }
-
-    .state-table-tools {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .state-table-tools__search {
-        grid-column: 1 / -1;
     }
 
     .event-page__meta,
@@ -1908,10 +1910,6 @@ p {
         width: min(260px, calc(100vw - 32px));
     }
 
-    .state-table-tools {
-        grid-template-columns: 1fr;
-    }
-
     .state-filters,
     .event-race__header,
     .event-candidate__compact-top,
@@ -1934,6 +1932,14 @@ p {
     .state-table-wrap {
         padding-left: 16px;
         padding-right: 16px;
+    }
+
+    .state-table-tools {
+        grid-template-columns: 1fr;
+    }
+
+    .state-table-tools__search {
+        grid-column: auto;
     }
 
     .event-race,
