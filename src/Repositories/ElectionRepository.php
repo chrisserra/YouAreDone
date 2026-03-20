@@ -7,7 +7,7 @@ namespace App\Repositories;
 use App\Core\Database;
 use PDO;
 
-final class ElectionRepository
+class ElectionRepository
 {
     private PDO $db;
 
@@ -27,34 +27,21 @@ final class ElectionRepository
                 et.name AS election_type,
                 GROUP_CONCAT(DISTINCT o.name ORDER BY o.sort_order ASC, o.name ASC SEPARATOR '||') AS offices
             FROM elections e
-            INNER JOIN election_types et
-                ON et.election_type_id = e.election_type_id
-            INNER JOIN races r
-                ON r.race_id = e.race_id
-            INNER JOIN offices o
-                ON o.office_id = r.office_id
+            INNER JOIN election_types et ON et.election_type_id = e.election_type_id
+            INNER JOIN races r ON r.race_id = e.race_id
+            INNER JOIN offices o ON o.office_id = r.office_id
             WHERE e.election_date = (
                 SELECT MIN(e2.election_date)
                 FROM elections e2
-                INNER JOIN races r2
-                    ON r2.race_id = e2.race_id
+                INNER JOIN races r2 ON r2.race_id = e2.race_id
                 WHERE e2.election_date >= CURDATE()
                   AND e2.status = 'upcoming'
                   AND r2.status = 'active'
             )
               AND e.status = 'upcoming'
               AND r.status = 'active'
-            GROUP BY
-                e.election_date,
-                r.state_name,
-                r.state_slug,
-                et.slug,
-                et.name
-            ORDER BY
-                e.election_date ASC,
-                r.state_name ASC,
-                et.sort_order ASC,
-                et.name ASC
+            GROUP BY e.election_date, r.state_name, r.state_slug, et.slug, et.name
+            ORDER BY e.election_date ASC, r.state_name ASC, et.sort_order ASC, et.name ASC
         ";
 
         $stmt = $this->db->prepare($sql);
@@ -68,40 +55,93 @@ final class ElectionRepository
         $limit = max(1, $limit);
 
         $sql = "
-        SELECT
-            grouped.election_date,
-            grouped.state_name,
-            grouped.state_slug,
-            grouped.election_type_slug,
-            grouped.election_type,
-            grouped.offices
-        FROM (
+            SELECT
+                grouped.election_date,
+                grouped.state_name,
+                grouped.state_slug,
+                grouped.election_type_slug,
+                grouped.election_type,
+                grouped.offices
+            FROM (
+                SELECT
+                    e.election_date,
+                    r.state_name,
+                    r.state_slug,
+                    et.slug AS election_type_slug,
+                    et.name AS election_type,
+                    et.sort_order AS election_type_sort,
+                    GROUP_CONCAT(DISTINCT o.name ORDER BY o.sort_order ASC, o.name ASC SEPARATOR '||') AS offices
+                FROM elections e
+                INNER JOIN election_types et ON et.election_type_id = e.election_type_id
+                INNER JOIN races r ON r.race_id = e.race_id
+                INNER JOIN offices o ON o.office_id = r.office_id
+                WHERE e.election_date >= CURDATE()
+                  AND e.status = 'upcoming'
+                  AND r.status = 'active'
+                  AND e.election_date > (
+                      SELECT MIN(e2.election_date)
+                      FROM elections e2
+                      INNER JOIN races r2 ON r2.race_id = e2.race_id
+                      WHERE e2.election_date >= CURDATE()
+                        AND e2.status = 'upcoming'
+                        AND r2.status = 'active'
+                  )
+                GROUP BY e.election_date, r.state_name, r.state_slug, et.slug, et.name, et.sort_order
+            ) AS grouped
+            ORDER BY grouped.election_date ASC, grouped.state_name ASC, grouped.election_type_sort ASC, grouped.election_type ASC
+            LIMIT :limit
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getCalendarBounds(): array
+    {
+        $sql = "
+            SELECT
+                MIN(e.election_date) AS min_election_date,
+                MAX(e.election_date) AS max_election_date
+            FROM elections e
+            INNER JOIN races r ON r.race_id = e.race_id
+            WHERE r.status = 'active'
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        $minElectionDate = $row['min_election_date'] ?? null;
+        $maxElectionDate = $row['max_election_date'] ?? null;
+
+        return [
+            'min_election_date' => $minElectionDate,
+            'max_election_date' => $maxElectionDate,
+            'min_month' => $minElectionDate ? substr((string) $minElectionDate, 0, 7) : null,
+            'max_month' => $maxElectionDate ? substr((string) $maxElectionDate, 0, 7) : null,
+        ];
+    }
+
+    public function getCalendarEventsForMonth(string $monthStart, string $monthEnd): array
+    {
+        $sql = "
             SELECT
                 e.election_date,
                 r.state_name,
                 r.state_slug,
                 et.slug AS election_type_slug,
                 et.name AS election_type,
-                et.sort_order AS election_type_sort,
                 GROUP_CONCAT(DISTINCT o.name ORDER BY o.sort_order ASC, o.name ASC SEPARATOR '||') AS offices
             FROM elections e
-            INNER JOIN election_types et
-                ON et.election_type_id = e.election_type_id
-            INNER JOIN races r
-                ON r.race_id = e.race_id
-            INNER JOIN offices o
-                ON o.office_id = r.office_id
-            WHERE e.election_date >= CURDATE()
-              AND e.status = 'upcoming'
+            INNER JOIN election_types et ON et.election_type_id = e.election_type_id
+            INNER JOIN races r ON r.race_id = e.race_id
+            INNER JOIN offices o ON o.office_id = r.office_id
+            WHERE e.election_date BETWEEN :monthStart AND :monthEnd
               AND r.status = 'active'
-              AND e.election_date > (
-                  SELECT MIN(e2.election_date)
-                  FROM elections e2
-                  INNER JOIN races r2 ON r2.race_id = e2.race_id
-                  WHERE e2.election_date >= CURDATE()
-                    AND e2.status = 'upcoming'
-                    AND r2.status = 'active'
-              )
             GROUP BY
                 e.election_date,
                 r.state_name,
@@ -109,18 +149,18 @@ final class ElectionRepository
                 et.slug,
                 et.name,
                 et.sort_order
-        ) AS grouped
-        ORDER BY
-            grouped.election_date ASC,
-            grouped.state_name ASC,
-            grouped.election_type_sort ASC,
-            grouped.election_type ASC
-        LIMIT :limit
-    ";
+            ORDER BY
+                e.election_date ASC,
+                r.state_name ASC,
+                et.sort_order ASC,
+                et.name ASC
+        ";
 
         $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
+        $stmt->execute([
+            ':monthStart' => $monthStart,
+            ':monthEnd' => $monthEnd,
+        ]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -157,11 +197,8 @@ final class ElectionRepository
                 r.state_slug
             FROM races r
             WHERE r.status = 'active'
-            GROUP BY
-                r.state_name,
-                r.state_slug
-            ORDER BY
-                r.state_name ASC
+            GROUP BY r.state_name, r.state_slug
+            ORDER BY r.state_name ASC
         ";
 
         $stmt = $this->db->prepare($sql);
@@ -191,32 +228,19 @@ final class ElectionRepository
                     GROUP_CONCAT(DISTINCT o.name ORDER BY o.sort_order ASC, o.name ASC SEPARATOR '||') AS offices,
                     ROW_NUMBER() OVER (
                         PARTITION BY r.state_slug
-                        ORDER BY
-                            e.election_date ASC,
-                            et.sort_order ASC,
-                            et.name ASC
+                        ORDER BY e.election_date ASC, et.sort_order ASC, et.name ASC
                     ) AS row_num
                 FROM elections e
-                INNER JOIN election_types et
-                    ON et.election_type_id = e.election_type_id
-                INNER JOIN races r
-                    ON r.race_id = e.race_id
-                INNER JOIN offices o
-                    ON o.office_id = r.office_id
+                INNER JOIN election_types et ON et.election_type_id = e.election_type_id
+                INNER JOIN races r ON r.race_id = e.race_id
+                INNER JOIN offices o ON o.office_id = r.office_id
                 WHERE e.election_date >= CURDATE()
                   AND e.status = 'upcoming'
                   AND r.status = 'active'
-                GROUP BY
-                    r.state_slug,
-                    r.state_name,
-                    e.election_date,
-                    et.name,
-                    et.slug,
-                    et.sort_order
+                GROUP BY r.state_slug, r.state_name, e.election_date, et.name, et.slug, et.sort_order
             ) AS x
             WHERE x.row_num = 1
-            ORDER BY
-                x.state_name ASC
+            ORDER BY x.state_name ASC
         ";
 
         $stmt = $this->db->prepare($sql);
@@ -227,7 +251,6 @@ final class ElectionRepository
 
         foreach ($rows as $row) {
             $stateSlug = (string) ($row['state_slug'] ?? '');
-
             if ($stateSlug === '') {
                 continue;
             }
@@ -249,33 +272,24 @@ final class ElectionRepository
         string $electionDate
     ): ?array {
         $sql = "
-        SELECT
-            e.election_date,
-            r.state_name,
-            r.state_slug,
-            et.slug AS election_type_slug,
-            et.name AS election_type,
-            GROUP_CONCAT(DISTINCT o.name ORDER BY o.sort_order ASC, o.name ASC SEPARATOR '||') AS offices
-        FROM elections e
-        INNER JOIN election_types et
-            ON et.election_type_id = e.election_type_id
-        INNER JOIN races r
-            ON r.race_id = e.race_id
-        INNER JOIN offices o
-            ON o.office_id = r.office_id
-        WHERE r.state_slug = :stateSlug
-          AND et.slug = :electionTypeSlug
-          AND e.election_date = :electionDate
-          AND e.status = 'upcoming'
-          AND r.status = 'active'
-        GROUP BY
-            e.election_date,
-            r.state_name,
-            r.state_slug,
-            et.slug,
-            et.name
-        LIMIT 1
-    ";
+            SELECT
+                e.election_date,
+                r.state_name,
+                r.state_slug,
+                et.slug AS election_type_slug,
+                et.name AS election_type,
+                GROUP_CONCAT(DISTINCT o.name ORDER BY o.sort_order ASC, o.name ASC SEPARATOR '||') AS offices
+            FROM elections e
+            INNER JOIN election_types et ON et.election_type_id = e.election_type_id
+            INNER JOIN races r ON r.race_id = e.race_id
+            INNER JOIN offices o ON o.office_id = r.office_id
+            WHERE r.state_slug = :stateSlug
+              AND et.slug = :electionTypeSlug
+              AND e.election_date = :electionDate
+              AND r.status = 'active'
+            GROUP BY e.election_date, r.state_name, r.state_slug, et.slug, et.name
+            LIMIT 1
+        ";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -352,20 +366,14 @@ final class ElectionRepository
                 r.office_id,
                 r.election_year
             FROM elections e
-            INNER JOIN election_types et
-                ON et.election_type_id = e.election_type_id
-            INNER JOIN races r
-                ON r.race_id = e.race_id
-            INNER JOIN offices o
-                ON o.office_id = r.office_id
+            INNER JOIN election_types et ON et.election_type_id = e.election_type_id
+            INNER JOIN races r ON r.race_id = e.race_id
+            INNER JOIN offices o ON o.office_id = r.office_id
             WHERE r.state_slug = :stateSlug
               AND et.slug = :electionTypeSlug
               AND e.election_date = :electionDate
               AND r.status = 'active'
-            ORDER BY
-                o.sort_order ASC,
-                o.name ASC,
-                r.district_number ASC
+            ORDER BY o.sort_order ASC, o.name ASC, r.district_number ASC
         ";
 
         $stmt = $this->db->prepare($sql);
@@ -376,7 +384,6 @@ final class ElectionRepository
         ]);
 
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
         $grouped = [];
 
         foreach ($rows as $row) {

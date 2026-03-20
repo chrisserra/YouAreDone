@@ -4,148 +4,193 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Core\View;
 use App\Repositories\ElectionRepository;
+use DateInterval;
+use DatePeriod;
+use DateTimeImmutable;
 
-final class HomeController
+class HomeController
 {
-    private ElectionRepository $electionRepository;
+    private ElectionRepository $elections;
 
-    public function __construct(?ElectionRepository $electionRepository = null)
+    public function __construct(?ElectionRepository $elections = null)
     {
-        $this->electionRepository = $electionRepository ?? new ElectionRepository();
+        $this->elections = $elections ?? new ElectionRepository();
     }
 
     public function index(): void
     {
-        $nextElections = $this->normalizeElectionEvents(
-            $this->electionRepository->getNextElectionEvents()
+        $bounds = $this->elections->getCalendarBounds();
+
+        $selectedMonth = $this->resolveSelectedMonth(
+            $_GET['month'] ?? null,
+            $bounds['min_month'] ?? null,
+            $bounds['max_month'] ?? null
         );
 
-        $upcomingElections = $this->normalizeElectionEvents(
-            $this->electionRepository->getUpcomingElectionEvents(12)
-        );
+        $monthStart = $selectedMonth . '-01';
+        $monthStartDate = new DateTimeImmutable($monthStart);
+        $monthEndDate = $monthStartDate->modify('last day of this month');
+        $monthEnd = $monthEndDate->format('Y-m-d');
 
-        $states = $this->normalizeStateRows(
-            $this->electionRepository->getStatesWithNextElection()
-        );
+        $rows = $this->elections->getCalendarEventsForMonth($monthStart, $monthEnd);
 
-        render_view('home', [
-            'pageTitle' => 'YouAreDone.org',
-            'metaDescription' => 'Track the next elections, upcoming elections, and where to watch next across presidential, U.S. Senate, U.S. House, and governor contests.',
-            'canonicalUrl' => absolute_url('/'),
-            'nextElections' => $nextElections,
-            'upcomingElections' => $upcomingElections,
-            'states' => $states,
-            'browseOffices' => $this->getBrowseOffices(),
-        ]);
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $rows
-     * @return array<int, array<string, mixed>>
-     */
-    private function normalizeElectionEvents(array $rows): array
-    {
-        $normalized = [];
-
+        $eventsByDate = [];
         foreach ($rows as $row) {
-            $stateName = trim((string) ($row['state_name'] ?? ''));
-            $stateSlug = trim((string) ($row['state_slug'] ?? ''));
-            $electionType = trim((string) ($row['election_type'] ?? ''));
-            $electionTypeSlug = trim((string) ($row['election_type_slug'] ?? ''));
-            $electionDate = $this->normalizeDate($row['election_date'] ?? null);
-
-            $normalized[] = [
-                'state_name' => $stateName,
-                'state_slug' => $stateSlug,
-                'election_type' => $electionType,
-                'election_type_slug' => $electionTypeSlug,
-                'election_type_label' => $this->formatElectionType($electionType),
-                'election_date' => $electionDate,
-                'event_label' => $this->buildEventLabel($stateName, $electionType),
-                'event_url' => $this->buildEventUrl($stateSlug, $electionTypeSlug, $electionDate),
-                'offices' => $this->normalizeOfficeList($row['offices'] ?? []),
-            ];
-        }
-
-        return $normalized;
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $rows
-     * @return array<int, array<string, mixed>>
-     */
-    private function normalizeStateRows(array $rows): array
-    {
-        $normalized = [];
-
-        foreach ($rows as $row) {
-            $stateName = trim((string) ($row['state_name'] ?? ''));
-            $stateSlug = trim((string) ($row['state_slug'] ?? ''));
-            $electionType = trim((string) ($row['election_type'] ?? ''));
-            $electionTypeSlug = trim((string) ($row['election_type_slug'] ?? ''));
-            $electionDate = $this->normalizeDate($row['next_election_date'] ?? null);
-
-            $normalized[] = [
-                'state_name' => $stateName,
-                'state_slug' => $stateSlug,
-                'next_election_date' => $electionDate,
-                'election_type' => $electionType,
-                'election_type_slug' => $electionTypeSlug,
-                'election_type_label' => $electionType !== ''
-                    ? $this->formatElectionType($electionType)
-                    : null,
-                'event_label' => $electionDate !== null
-                    ? $this->buildEventLabel($stateName, $electionType)
-                    : null,
-                'event_url' => $this->buildEventUrl($stateSlug, $electionTypeSlug, $electionDate),
-                'offices' => $this->normalizeOfficeList($row['offices'] ?? []),
-            ];
-        }
-
-        return $normalized;
-    }
-
-    /**
-     * @param string|array<int, mixed>|null $value
-     * @return array<int, string>
-     */
-    private function normalizeOfficeList(string|array|null $value): array
-    {
-        $items = [];
-
-        if (is_array($value)) {
-            $items = $value;
-        } elseif (is_string($value) && $value !== '') {
-            $items = explode('||', $value);
-        }
-
-        $normalized = [];
-
-        foreach ($items as $item) {
-            $office = trim((string) $item);
-
-            if ($office === '') {
+            $eventDate = (string) ($row['election_date'] ?? '');
+            if ($eventDate === '') {
                 continue;
             }
 
-            $normalized[$office] = $office;
+            if (!isset($eventsByDate[$eventDate])) {
+                $eventsByDate[$eventDate] = [];
+            }
+
+            $eventsByDate[$eventDate][] = [
+                'title' => $this->buildEventLabel(
+                    (string) ($row['state_name'] ?? ''),
+                    (string) ($row['election_type'] ?? '')
+                ),
+                'url' => $this->buildEventUrl([
+                    'state_slug' => (string) ($row['state_slug'] ?? ''),
+                    'election_type_slug' => (string) ($row['election_type_slug'] ?? ''),
+                    'election_date' => $eventDate,
+                ]),
+                'offices' => $this->parseOffices((string) ($row['offices'] ?? '')),
+            ];
         }
 
-        return array_values($normalized);
+        $calendarWeeks = $this->buildCalendarWeeks(
+            $monthStartDate,
+            $monthEndDate,
+            $eventsByDate
+        );
+
+        $minMonth = $bounds['min_month'] ?? null;
+        $maxMonth = $bounds['max_month'] ?? null;
+
+        $prevMonth = $monthStartDate->modify('-1 month')->format('Y-m');
+        $nextMonth = $monthStartDate->modify('+1 month')->format('Y-m');
+
+        $calendarHasPrev = $minMonth !== null && $prevMonth >= $minMonth;
+        $calendarHasNext = $maxMonth !== null && $nextMonth <= $maxMonth;
+
+        $states = $this->normalizeStateCards(
+            $this->elections->getStatesWithNextElection()
+        );
+
+        View::render('home', [
+            'calendarMonth' => $selectedMonth,
+            'calendarMonthLabel' => $monthStartDate->format('F Y'),
+            'calendarHasPrev' => $calendarHasPrev,
+            'calendarHasNext' => $calendarHasNext,
+            'calendarPrevUrl' => $calendarHasPrev ? '/?month=' . $prevMonth : null,
+            'calendarNextUrl' => $calendarHasNext ? '/?month=' . $nextMonth : null,
+            'calendarWeeks' => $calendarWeeks,
+            'states' => $states,
+            'browseOffices' => $this->browseOffices(),
+        ]);
     }
 
-    private function normalizeDate(mixed $value): ?string
+    private function resolveSelectedMonth(
+        mixed $requestedMonth,
+        ?string $minMonth,
+        ?string $maxMonth
+    ): string {
+        $currentMonth = (new DateTimeImmutable('today'))->format('Y-m');
+
+        $month = is_string($requestedMonth) && preg_match('/^\d{4}-\d{2}$/', $requestedMonth)
+            ? $requestedMonth
+            : $currentMonth;
+
+        if ($minMonth !== null && $month < $minMonth) {
+            return $minMonth;
+        }
+
+        if ($maxMonth !== null && $month > $maxMonth) {
+            return $maxMonth;
+        }
+
+        return $month;
+    }
+
+    private function buildCalendarWeeks(
+        DateTimeImmutable $monthStartDate,
+        DateTimeImmutable $monthEndDate,
+        array $eventsByDate
+    ): array {
+        $gridStart = $monthStartDate->modify('-' . ((int) $monthStartDate->format('w')) . ' days');
+        $gridEnd = $monthEndDate->modify('+' . (6 - (int) $monthEndDate->format('w')) . ' days');
+
+        $today = (new DateTimeImmutable('today'))->format('Y-m-d');
+        $selectedMonth = $monthStartDate->format('Y-m');
+
+        $period = new DatePeriod(
+            $gridStart,
+            new DateInterval('P1D'),
+            $gridEnd->modify('+1 day')
+        );
+
+        $weeks = [];
+        $week = [];
+
+        foreach ($period as $date) {
+            $dateString = $date->format('Y-m-d');
+
+            $week[] = [
+                'date' => $dateString,
+                'dayNumber' => (int) $date->format('j'),
+                'isCurrentMonth' => $date->format('Y-m') === $selectedMonth,
+                'isToday' => $dateString === $today,
+                'isPast' => $dateString < $today,
+                'events' => $eventsByDate[$dateString] ?? [],
+            ];
+
+            if (count($week) === 7) {
+                $weeks[] = $week;
+                $week = [];
+            }
+        }
+
+        if ($week !== []) {
+            $weeks[] = $week;
+        }
+
+        return $weeks;
+    }
+
+    private function normalizeStateCards(array $rows): array
     {
-        if (!is_string($value) || trim($value) === '') {
+        $cards = [];
+
+        foreach ($rows as $row) {
+            $cards[] = [
+                'state_name' => (string) ($row['state_name'] ?? ''),
+                'state_slug' => (string) ($row['state_slug'] ?? ''),
+                'state_url' => '/races/' . rawurlencode((string) ($row['state_slug'] ?? '')) . '/senate/' . date('Y'),
+                'next_election_date' => $row['next_election_date'] ?: null,
+                'next_election_label' => $this->buildStateElectionLabel($row),
+                'offices' => $this->parseOffices((string) ($row['offices'] ?? '')),
+            ];
+        }
+
+        return $cards;
+    }
+
+    private function buildStateElectionLabel(array $row): ?string
+    {
+        $date = $row['next_election_date'] ?? null;
+        $type = $row['election_type'] ?? null;
+
+        if (!$date || !$type) {
             return null;
         }
 
-        $date = trim($value);
+        $formattedDate = $this->formatDate((string) $date);
+        $formattedType = $this->formatElectionType((string) $type);
 
-        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1
-            ? $date
-            : null;
+        return trim($formattedDate . ' · ' . $formattedType);
     }
 
     private function buildEventLabel(string $stateName, string $electionType): string
@@ -164,15 +209,6 @@ final class HomeController
         return $stateName . ' ' . $typeLabel;
     }
 
-    private function buildEventUrl(string $stateSlug, string $electionTypeSlug, ?string $electionDate): ?string
-    {
-        if ($stateSlug === '' || $electionTypeSlug === '' || $electionDate === null) {
-            return null;
-        }
-
-        return '/elections/' . rawurlencode($stateSlug) . '/' . rawurlencode($electionTypeSlug) . '/' . rawurlencode($electionDate);
-    }
-
     private function formatElectionType(string $value): string
     {
         return match (strtolower(trim($value))) {
@@ -187,28 +223,45 @@ final class HomeController
         };
     }
 
-    /**
-     * @return array<int, array<string, string>>
-     */
-    private function getBrowseOffices(): array
+    private function buildEventUrl(array $row): string
+    {
+        return sprintf(
+            '/elections/%s/%s/%s',
+            rawurlencode((string) ($row['state_slug'] ?? '')),
+            rawurlencode((string) ($row['election_type_slug'] ?? '')),
+            rawurlencode((string) ($row['election_date'] ?? ''))
+        );
+    }
+
+    private function parseOffices(string $value): array
+    {
+        if ($value === '') {
+            return [];
+        }
+
+        $parts = array_filter(array_map('trim', explode('||', $value)));
+
+        return array_values(array_unique($parts));
+    }
+
+    private function formatDate(string $value): string
+    {
+        $date = DateTimeImmutable::createFromFormat('Y-m-d', $value);
+
+        if (!$date) {
+            return $value;
+        }
+
+        return $date->format('M j, Y');
+    }
+
+    private function browseOffices(): array
     {
         return [
-            [
-                'name' => 'President',
-                'slug' => 'president',
-            ],
-            [
-                'name' => 'U.S. Senate',
-                'slug' => 'us-senate',
-            ],
-            [
-                'name' => 'U.S. House',
-                'slug' => 'us-house',
-            ],
-            [
-                'name' => 'Governor',
-                'slug' => 'governor',
-            ],
+            'president' => 'President',
+            'senate' => 'U.S. Senate',
+            'house' => 'U.S. House',
+            'governor' => 'Governor',
         ];
     }
 }

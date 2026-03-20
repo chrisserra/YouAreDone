@@ -8,10 +8,12 @@ declare(strict_types=1);
 /** @var string|null $canonicalUrl */
 /** @var string|null $ogImage */
 
+$version = 10;
+
 $pageTitle = $pageTitle ?? 'YouAreDone.org';
 $metaDescription = $metaDescription ?? 'Track upcoming election events, watched races, and candidate accountability.';
 $canonicalUrl = $canonicalUrl ?? 'https://youaredone.org/';
-$ogImage = $ogImage ?? 'https://youaredone.org/assets/images/og-default.png';
+$ogImage = $ogImage ?? 'https://youaredone.org/assets/images/og-default.png?v='. $version;
 
 if (!function_exists('h')) {
     function h(?string $value): string
@@ -59,7 +61,7 @@ $emailShareUrl = 'mailto:?subject=' . $emailSubject . '&body=' . $emailBody;
             crossorigin="anonymous"
             referrerpolicy="no-referrer"
     >
-    <link rel="stylesheet" href="/assets/css/app.css?v=6">
+    <link rel="stylesheet" href="/assets/css/app.css?v=<?= $version ?>">
 </head>
 <body class="site-body">
 
@@ -67,7 +69,7 @@ $emailShareUrl = 'mailto:?subject=' . $emailSubject . '&body=' . $emailBody;
     <div class="site-header__inner">
         <div class="site-header__top">
             <a href="/" class="site-logo" aria-label="YouAreDone.org home">
-                <img src="/assets/images/youaredone_logo.png?v=6" alt="YouAreDone.org">
+                <img src="/assets/images/youaredone_logo.png?v=<?= $version ?>" alt="YouAreDone.org">
             </a>
 
             <div class="site-header__share">
@@ -134,6 +136,6 @@ $emailShareUrl = 'mailto:?subject=' . $emailSubject . '&body=' . $emailBody;
     <?= $content ?>
 </main>
 
-<script src="/assets/js/app.js?v=2"></script>
+<script src="/assets/js/app.js?v=<?= $version ?>"></script>
 </body>
 </html>
