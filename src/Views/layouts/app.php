@@ -16,7 +16,7 @@ $ogImage = $ogImage ?? 'https://youaredone.org/assets/images/og-default.png';
 if (!function_exists('h')) {
     function h(?string $value): string
     {
-        return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+        return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
     }
 }
 
@@ -25,7 +25,6 @@ $shareTitle = $pageTitle;
 $shareText = $pageTitle . ' - ' . $metaDescription;
 
 $encodedUrl = rawurlencode($shareUrl);
-$encodedTitle = rawurlencode($shareTitle);
 $encodedText = rawurlencode($shareText);
 $emailSubject = rawurlencode($shareTitle);
 $emailBody = rawurlencode($shareText . "\n\n" . $shareUrl);
@@ -41,10 +40,8 @@ $emailShareUrl = 'mailto:?subject=' . $emailSubject . '&body=' . $emailBody;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title><?= h($pageTitle) ?></title>
     <meta name="description" content="<?= h($metaDescription) ?>">
-
     <link rel="canonical" href="<?= h($canonicalUrl) ?>">
 
     <meta property="og:title" content="<?= h($pageTitle) ?>">
@@ -62,74 +59,72 @@ $emailShareUrl = 'mailto:?subject=' . $emailSubject . '&body=' . $emailBody;
             crossorigin="anonymous"
             referrerpolicy="no-referrer"
     >
-
-    <link rel="stylesheet" href="/assets/css/app.css?v=5">
+    <link rel="stylesheet" href="/assets/css/app.css?v=6">
 </head>
 <body class="site-body">
+
 <header class="site-header">
     <div class="site-header__inner">
-        <div class="site-header__left">
+        <div class="site-header__top">
             <a href="/" class="site-logo" aria-label="YouAreDone.org home">
-                <img src="/assets/images/youaredone_logo.png?v=5" alt="YouAreDone.org">
+                <img src="/assets/images/youaredone_logo.png?v=6" alt="YouAreDone.org">
             </a>
 
-            <div class="site-header__branding">
-                <div class="site-header__tagline">
-                    Track elections. Compare candidates. Hold incumbents accountable.
+            <div class="site-header__share">
+                <button
+                        type="button"
+                        class="site-header__share-toggle"
+                        data-share-toggle
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="share-menu"
+                >
+                    <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                    <span>Share</span>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+
+                <div class="site-header__share-menu" id="share-menu" data-share-menu hidden>
+                    <button
+                            type="button"
+                            class="site-header__share-item"
+                            data-copy-link="<?= h($shareUrl) ?>"
+                    >
+                        <i class="fa-solid fa-link"></i>
+                        <span>Copy Link</span>
+                    </button>
+
+                    <a href="<?= h($emailShareUrl) ?>" class="site-header__share-item">
+                        <i class="fa-solid fa-envelope"></i>
+                        <span>Email</span>
+                    </a>
+
+                    <a href="<?= h($facebookShareUrl) ?>" class="site-header__share-item" target="_blank" rel="noopener noreferrer">
+                        <i class="fa-brands fa-facebook"></i>
+                        <span>Facebook</span>
+                    </a>
+
+                    <a href="<?= h($xShareUrl) ?>" class="site-header__share-item" target="_blank" rel="noopener noreferrer">
+                        <i class="fa-brands fa-x-twitter"></i>
+                        <span>X</span>
+                    </a>
+
+                    <a href="<?= h($blueskyShareUrl) ?>" class="site-header__share-item" target="_blank" rel="noopener noreferrer">
+                        <i class="fa-solid fa-cloud"></i>
+                        <span>Bluesky</span>
+                    </a>
+
+                    <a href="<?= h($threadsShareUrl) ?>" class="site-header__share-item" target="_blank" rel="noopener noreferrer">
+                        <i class="fa-brands fa-threads"></i>
+                        <span>Threads</span>
+                    </a>
                 </div>
             </div>
         </div>
 
-        <div class="site-header__share">
-            <button
-                    type="button"
-                    class="site-header__share-toggle"
-                    data-share-toggle
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                    aria-controls="share-menu"
-            >
-                <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
-                <span>Share</span>
-                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-            </button>
-
-            <div class="site-header__share-menu" id="share-menu" data-share-menu hidden>
-
-                <button
-                        type="button"
-                        class="site-header__share-item"
-                        data-copy-link="<?= h($shareUrl) ?>"
-                >
-                    <i class="fa-solid fa-link"></i>
-                    <span>Copy Link</span>
-                </button>
-
-                <a href="<?= h($emailShareUrl) ?>" class="site-header__share-item">
-                    <i class="fa-solid fa-envelope"></i>
-                    <span>Email</span>
-                </a>
-
-                <a href="<?= h($facebookShareUrl) ?>" class="site-header__share-item" target="_blank">
-                    <i class="fa-brands fa-facebook"></i>
-                    <span>Facebook</span>
-                </a>
-
-                <a href="<?= h($xShareUrl) ?>" class="site-header__share-item" target="_blank">
-                    <i class="fa-brands fa-x-twitter"></i>
-                    <span>X</span>
-                </a>
-
-                <a href="<?= h($blueskyShareUrl) ?>" class="site-header__share-item" target="_blank">
-                    <i class="fa-solid fa-cloud"></i>
-                    <span>Bluesky</span>
-                </a>
-
-                <a href="<?= h($threadsShareUrl) ?>" class="site-header__share-item" target="_blank">
-                    <i class="fa-brands fa-threads"></i>
-                    <span>Threads</span>
-                </a>
-
+        <div class="site-header__branding">
+            <div class="site-header__tagline">
+                Track elections. Compare candidates. Hold incumbents accountable.
             </div>
         </div>
     </div>
@@ -139,6 +134,6 @@ $emailShareUrl = 'mailto:?subject=' . $emailSubject . '&body=' . $emailBody;
     <?= $content ?>
 </main>
 
-<script src="/assets/js/app.js?v=1"></script>
+<script src="/assets/js/app.js?v=2"></script>
 </body>
 </html>
