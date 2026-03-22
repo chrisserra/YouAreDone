@@ -9,6 +9,22 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+DROP TABLE IF EXISTS `candidate_flag_sources`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `candidate_flag_sources` (
+  `candidate_flag_source_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `candidate_flag_id` bigint(20) unsigned NOT NULL,
+  `source_id` bigint(20) unsigned NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`candidate_flag_source_id`),
+  UNIQUE KEY `uq_candidate_flag_sources` (`candidate_flag_id`,`source_id`),
+  KEY `ix_candidate_flag_sources_candidate_flag` (`candidate_flag_id`),
+  KEY `ix_candidate_flag_sources_source` (`source_id`),
+  CONSTRAINT `fk_candidate_flag_sources_candidate_flag` FOREIGN KEY (`candidate_flag_id`) REFERENCES `candidate_flags` (`candidate_flag_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_candidate_flag_sources_source` FOREIGN KEY (`source_id`) REFERENCES `candidate_sources` (`source_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `candidate_flags`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -40,6 +56,7 @@ CREATE TABLE `candidate_sources` (
   `candidate_id` bigint(20) unsigned NOT NULL,
   `election_id` bigint(20) unsigned DEFAULT NULL,
   `source_type` enum('official','campaign','news','ballotpedia','fec','state_filing','social','other') NOT NULL DEFAULT 'other',
+  `supports_field` varchar(100) DEFAULT NULL,
   `source_name` varchar(255) NOT NULL,
   `source_title` varchar(500) DEFAULT NULL,
   `source_url` varchar(1000) NOT NULL,
