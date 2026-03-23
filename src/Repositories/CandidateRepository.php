@@ -187,12 +187,12 @@ final class CandidateRepository
             INNER JOIN candidates c
                 ON c.candidate_id = ec.candidate_id
             WHERE ec.election_id = :election_id
-              AND c.status = 'active'
+                AND c.status = 'active'
             ORDER BY
+                ec.is_incumbent DESC,
                 c.score_total DESC,
                 c.green_flag_count DESC,
                 c.red_flag_count ASC,
-                ec.is_incumbent DESC,
                 c.full_name ASC
             LIMIT {$limit}
         ";
