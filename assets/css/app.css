@@ -476,6 +476,28 @@ p {
     overflow: hidden;
 }
 
+.event-page__hint {
+    margin-top: 6px;
+    font-size: 0.9em;
+    opacity: 0.7;
+    color: var(--text-soft);
+}
+
+.event-candidate--incumbent {
+    border: 1px solid rgba(252, 165, 165, 0.4);
+    box-shadow: 0 0 0 1px rgba(252, 165, 165, 0.15);
+}
+
+.event-candidate__incumbent-badge {
+    margin-left: 6px;
+    font-size: 0.7em;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(252, 165, 165, 0.15);
+    color: var(--danger);
+    font-weight: 600;
+}
+
 @media (max-width: 991px) {
     .cookie-banner {
         left: 16px;

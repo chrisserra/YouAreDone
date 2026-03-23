@@ -79,6 +79,13 @@ $electionDate = (string) ($event['election_date'] ?? '');
 $stateName = trim((string) ($event['state_name'] ?? ''));
 $electionType = trim((string) ($event['election_type'] ?? ''));
 
+$primaryPartyCode = strtoupper(trim((string) ($event['primary_party_code'] ?? '')));
+$primaryPartyLabel = match ($primaryPartyCode) {
+    'DEM' => 'Democratic Primary',
+    'REP' => 'Republican Primary',
+    default => $primaryPartyCode !== '' ? $primaryPartyCode . ' Primary' : '',
+};
+
 $officeOrder = [
     'President' => 1,
     'Governor' => 2,
@@ -102,7 +109,9 @@ if ($racesByOffice !== []) {
 
 <section class="event-page">
     <div class="event-page__hero card">
-        <p class="event-page__eyebrow">Election Event</p>
+        <p class="event-page__eyebrow">
+            <?= h($primaryPartyLabel !== '' ? $primaryPartyLabel : 'Election Event') ?>
+        </p>
         <h1 class="event-page__title"><?= h($eventLabel) ?></h1>
         <p class="event-page__summary">
             This page groups all tracked races in this election event by office and shows candidates ranked by documented green and red flags.
@@ -127,9 +136,13 @@ if ($racesByOffice !== []) {
     </div>
 
     <div class="event-page__explainer card">
-        <h2 class="event-page__section-title">How to read this page</h2>
+        <h2 class="event-page__section-title">How scoring works</h2>
         <p class="event-page__section-copy">
-            Candidates are ranked by score, with green flags helping and red flags hurting. Click any candidate card to open their full page.
+            Each candidate earns points for good positions and loses points for harmful ones. Every green flag adds points. Every red flag subtracts points. Some issues matter more than others, so certain flags are worth more points than others. Candidates with more strong positives and fewer serious negatives will have higher scores and rank higher.
+        </p>
+
+        <p class="event-page__hint">
+            Not all flags are equal — some carry more weight based on impact.
         </p>
     </div>
 
@@ -198,6 +211,8 @@ if ($racesByOffice !== []) {
                                                     $candidateUrl = '/candidate/' . rawurlencode($candidateSlug);
                                                 }
                                                 $candidateName = trim((string) ($candidate['full_name'] ?? $candidate['name'] ?? 'Candidate'));
+                                                $isIncumbent = (int) ($candidate['is_incumbent'] ?? 0) === 1;
+                                                $incumbentClass = $isIncumbent ? ' event-candidate--incumbent' : '';
 
                                                 $rankLabel = match ($rank) {
                                                     1 => 'Top ranked',
@@ -211,12 +226,12 @@ if ($racesByOffice !== []) {
                                                     $rankClass .= ' event-candidate--top';
                                                 }
 
-                                                $hiddenAttribute = $rank > 1 ? ' data-hidden-candidate="true"' : '';
+                                                $hiddenAttribute = ($rank > 1 && !$isIncumbent) ? ' data-hidden-candidate="true"' : '';
                                                 $clickableClass = $candidateUrl !== '' ? ' event-candidate--clickable' : '';
                                                 ?>
                                                 <?php if ($candidateUrl !== ''): ?>
                                                     <a
-                                                            class="event-candidate event-candidate--compact event-candidate--clickable<?= h($rankClass) ?>"
+                                                            class="event-candidate event-candidate--compact event-candidate--clickable<?= h($rankClass . $incumbentClass) ?>"
                                                             href="<?= h($candidateUrl) ?>"
                                                         <?= $hiddenAttribute ?>
                                                             aria-label="View candidate <?= h($candidateName) ?>"
@@ -247,10 +262,15 @@ if ($racesByOffice !== []) {
                                                         </div>
                                                     </a>
                                                 <?php else: ?>
-                                                    <article class="event-candidate event-candidate--compact<?= h($rankClass) ?>"<?= $hiddenAttribute ?>>
+                                                    <article class="event-candidate event-candidate--compact<?= h($rankClass . $incumbentClass) ?>"<?= $hiddenAttribute ?>>
                                                         <div class="event-candidate__compact-top">
                                                             <div class="event-candidate__compact-main">
-                                                                <h5 class="event-candidate__name"><?= h($candidateName) ?></h5>
+                                                                <h5 class="event-candidate__name">
+                                                                    <?= h($candidateName) ?>
+                                                                    <?php if ($isIncumbent): ?>
+                                                                        <span class="event-candidate__incumbent-badge">Incumbent</span>
+                                                                    <?php endif; ?>
+                                                                </h5>
                                                                 <div class="event-candidate__rank-row">
                                                                     <span class="event-candidate__rank-label"><?= h($rankLabel) ?></span>
                                                                 </div>

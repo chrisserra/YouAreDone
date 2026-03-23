@@ -16,9 +16,10 @@ CREATE TABLE `candidate_flag_sources` (
   `candidate_flag_source_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `candidate_flag_id` bigint(20) unsigned NOT NULL,
   `source_id` bigint(20) unsigned NOT NULL,
+  `confidence_score` tinyint(4) NOT NULL DEFAULT 3,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`candidate_flag_source_id`),
-  UNIQUE KEY `uq_candidate_flag_sources` (`candidate_flag_id`,`source_id`),
+  UNIQUE KEY `uq_candidate_flag_sources_flag_source` (`candidate_flag_id`,`source_id`),
   KEY `ix_candidate_flag_sources_candidate_flag` (`candidate_flag_id`),
   KEY `ix_candidate_flag_sources_source` (`source_id`),
   CONSTRAINT `fk_candidate_flag_sources_candidate_flag` FOREIGN KEY (`candidate_flag_id`) REFERENCES `candidate_flags` (`candidate_flag_id`) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -40,6 +41,7 @@ CREATE TABLE `candidate_flags` (
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`candidate_flag_id`),
   UNIQUE KEY `uq_candidate_flags` (`candidate_id`,`flag_id`),
+  UNIQUE KEY `uq_candidate_flags_candidate_flag` (`candidate_id`,`flag_id`),
   KEY `ix_candidate_flags_candidate` (`candidate_id`,`is_active`),
   KEY `ix_candidate_flags_flag` (`flag_id`,`is_active`),
   KEY `ix_candidate_flags_source` (`source_id`),
@@ -56,17 +58,20 @@ CREATE TABLE `candidate_sources` (
   `candidate_id` bigint(20) unsigned NOT NULL,
   `election_id` bigint(20) unsigned DEFAULT NULL,
   `source_type` enum('official','campaign','news','ballotpedia','fec','state_filing','social','other') NOT NULL DEFAULT 'other',
+  `source_priority` tinyint(4) NOT NULL DEFAULT 2,
   `supports_field` varchar(100) DEFAULT NULL,
   `source_name` varchar(255) NOT NULL,
-  `source_title` varchar(500) DEFAULT NULL,
+  `source_title` varchar(255) NOT NULL DEFAULT 'Candidate Source',
   `source_url` varchar(1000) NOT NULL,
   `published_at` datetime DEFAULT NULL,
   `retrieved_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `last_checked_at` datetime DEFAULT NULL,
   `excerpt` text DEFAULT NULL,
   `raw_content` mediumtext DEFAULT NULL,
   `content_hash` char(64) DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`source_id`),
+  UNIQUE KEY `uq_candidate_sources_candidate_field_url` (`candidate_id`,`supports_field`,`source_url`) USING HASH,
   KEY `ix_candidate_sources_candidate` (`candidate_id`,`retrieved_at`),
   KEY `ix_candidate_sources_election` (`election_id`),
   KEY `ix_candidate_sources_type` (`source_type`),
@@ -219,6 +224,7 @@ CREATE TABLE `elections` (
   `race_id` bigint(20) unsigned NOT NULL,
   `event_id` bigint(20) unsigned NOT NULL,
   `election_type_id` smallint(5) unsigned NOT NULL,
+  `primary_party_code` varchar(10) DEFAULT NULL,
   `election_date` date NOT NULL,
   `round_number` tinyint(3) unsigned NOT NULL DEFAULT 1,
   `title` varchar(255) NOT NULL,
@@ -234,6 +240,7 @@ CREATE TABLE `elections` (
   PRIMARY KEY (`election_id`),
   UNIQUE KEY `uq_elections_slug` (`slug`),
   UNIQUE KEY `uq_elections_race_type_date_round` (`race_id`,`election_type_id`,`election_date`,`round_number`),
+  UNIQUE KEY `uq_elections_race_type_party` (`race_id`,`election_type_id`,`primary_party_code`),
   KEY `fk_elections_type` (`election_type_id`),
   KEY `ix_elections_date` (`election_date`),
   KEY `ix_elections_race_status` (`race_id`,`status`),
@@ -352,6 +359,247 @@ CREATE TABLE `races` (
   CONSTRAINT `fk_races_office` FOREIGN KEY (`office_id`) REFERENCES `offices` (`office_id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `vw_candidate_flag_coverage_gaps`;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_flag_coverage_gaps`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `vw_candidate_flag_coverage_gaps` AS SELECT 
+ 1 AS `candidate_id`,
+ 1 AS `full_name`,
+ 1 AS `source_count`,
+ 1 AS `flag_count`,
+ 1 AS `flag_source_count`,
+ 1 AS `supported_field_count`*/;
+SET character_set_client = @saved_cs_client;
+DROP TABLE IF EXISTS `vw_candidate_flag_coverage_gaps_smart`;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_flag_coverage_gaps_smart`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `vw_candidate_flag_coverage_gaps_smart` AS SELECT 
+ 1 AS `candidate_id`,
+ 1 AS `full_name`,
+ 1 AS `source_count`,
+ 1 AS `flag_count`,
+ 1 AS `flag_source_count`,
+ 1 AS `flag_eligible_supported_field_count`*/;
+SET character_set_client = @saved_cs_client;
+DROP TABLE IF EXISTS `vw_candidate_rankings_ui`;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_rankings_ui`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `vw_candidate_rankings_ui` AS SELECT 
+ 1 AS `candidate_id`,
+ 1 AS `full_name`,
+ 1 AS `green_flag_count`,
+ 1 AS `red_flag_count`,
+ 1 AS `total_flag_count`,
+ 1 AS `score_final`,
+ 1 AS `rank_position`,
+ 1 AS `score_tier`,
+ 1 AS `badge_class`*/;
+SET character_set_client = @saved_cs_client;
+DROP TABLE IF EXISTS `vw_candidate_scores`;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_scores`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `vw_candidate_scores` AS SELECT 
+ 1 AS `candidate_id`,
+ 1 AS `full_name`,
+ 1 AS `green_flag_count`,
+ 1 AS `red_flag_count`,
+ 1 AS `score_total`*/;
+SET character_set_client = @saved_cs_client;
+DROP TABLE IF EXISTS `vw_candidate_scores_final`;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_scores_final`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `vw_candidate_scores_final` AS SELECT 
+ 1 AS `candidate_id`,
+ 1 AS `full_name`,
+ 1 AS `green_flag_count`,
+ 1 AS `red_flag_count`,
+ 1 AS `total_flag_count`,
+ 1 AS `score_total`,
+ 1 AS `score_normalized`,
+ 1 AS `score_hybrid`,
+ 1 AS `weighted_green_score`,
+ 1 AS `weighted_red_score`,
+ 1 AS `weighted_score_total`,
+ 1 AS `score_final`*/;
+SET character_set_client = @saved_cs_client;
+DROP TABLE IF EXISTS `vw_candidate_scores_hybrid`;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_scores_hybrid`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `vw_candidate_scores_hybrid` AS SELECT 
+ 1 AS `candidate_id`,
+ 1 AS `full_name`,
+ 1 AS `green_flag_count`,
+ 1 AS `red_flag_count`,
+ 1 AS `total_flag_count`,
+ 1 AS `score_total`,
+ 1 AS `score_normalized`,
+ 1 AS `score_hybrid`*/;
+SET character_set_client = @saved_cs_client;
+DROP TABLE IF EXISTS `vw_candidate_scores_normalized`;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_scores_normalized`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `vw_candidate_scores_normalized` AS SELECT 
+ 1 AS `candidate_id`,
+ 1 AS `full_name`,
+ 1 AS `green_flag_count`,
+ 1 AS `red_flag_count`,
+ 1 AS `total_flag_count`,
+ 1 AS `score_total`,
+ 1 AS `score_normalized`*/;
+SET character_set_client = @saved_cs_client;
+DROP TABLE IF EXISTS `vw_candidate_scores_weighted`;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_scores_weighted`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `vw_candidate_scores_weighted` AS SELECT 
+ 1 AS `candidate_id`,
+ 1 AS `full_name`,
+ 1 AS `weighted_green_score`,
+ 1 AS `weighted_red_score`,
+ 1 AS `total_flag_count`,
+ 1 AS `weighted_score_total`*/;
+SET character_set_client = @saved_cs_client;
+DROP TABLE IF EXISTS `vw_candidate_source_refresh_queue`;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_source_refresh_queue`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `vw_candidate_source_refresh_queue` AS SELECT 
+ 1 AS `source_id`,
+ 1 AS `candidate_id`,
+ 1 AS `full_name`,
+ 1 AS `source_type`,
+ 1 AS `source_priority`,
+ 1 AS `supports_field`,
+ 1 AS `source_name`,
+ 1 AS `source_title`,
+ 1 AS `source_url`,
+ 1 AS `last_checked_at`,
+ 1 AS `days_since_checked`*/;
+SET character_set_client = @saved_cs_client;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_flag_coverage_gaps`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`cserraco_master`@`24.16.58.27` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_candidate_flag_coverage_gaps` AS select `c`.`candidate_id` AS `candidate_id`,`c`.`full_name` AS `full_name`,count(distinct `cs`.`source_id`) AS `source_count`,count(distinct `cf`.`candidate_flag_id`) AS `flag_count`,count(distinct `cfs`.`candidate_flag_source_id`) AS `flag_source_count`,count(distinct `cs`.`supports_field`) AS `supported_field_count` from (((`candidates` `c` join `candidate_sources` `cs` on(`cs`.`candidate_id` = `c`.`candidate_id`)) left join `candidate_flags` `cf` on(`cf`.`candidate_id` = `c`.`candidate_id`)) left join `candidate_flag_sources` `cfs` on(`cfs`.`candidate_flag_id` = `cf`.`candidate_flag_id`)) group by `c`.`candidate_id`,`c`.`full_name` having count(distinct `cs`.`supports_field`) > count(distinct `cf`.`candidate_flag_id`) or count(distinct `cf`.`candidate_flag_id`) > count(distinct `cfs`.`candidate_flag_source_id`) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_flag_coverage_gaps_smart`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`cserraco_master`@`24.16.58.27` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_candidate_flag_coverage_gaps_smart` AS select `c`.`candidate_id` AS `candidate_id`,`c`.`full_name` AS `full_name`,count(distinct `cs`.`source_id`) AS `source_count`,count(distinct `cf`.`candidate_flag_id`) AS `flag_count`,count(distinct `cfs`.`candidate_flag_source_id`) AS `flag_source_count`,count(distinct case when `cs`.`supports_field` not in ('campaign_website','candidate_profile','ballot_status') then `cs`.`supports_field` end) AS `flag_eligible_supported_field_count` from (((`candidates` `c` join `candidate_sources` `cs` on(`cs`.`candidate_id` = `c`.`candidate_id`)) left join `candidate_flags` `cf` on(`cf`.`candidate_id` = `c`.`candidate_id`)) left join `candidate_flag_sources` `cfs` on(`cfs`.`candidate_flag_id` = `cf`.`candidate_flag_id`)) group by `c`.`candidate_id`,`c`.`full_name` having count(distinct case when `cs`.`supports_field` not in ('campaign_website','candidate_profile','ballot_status') then `cs`.`supports_field` end) > count(distinct `cf`.`candidate_flag_id`) or count(distinct `cf`.`candidate_flag_id`) > count(distinct `cfs`.`candidate_flag_source_id`) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_rankings_ui`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`cserraco_master`@`24.16.58.27` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_candidate_rankings_ui` AS select `ranked`.`candidate_id` AS `candidate_id`,`ranked`.`full_name` AS `full_name`,`ranked`.`green_flag_count` AS `green_flag_count`,`ranked`.`red_flag_count` AS `red_flag_count`,`ranked`.`total_flag_count` AS `total_flag_count`,`ranked`.`score_final` AS `score_final`,`ranked`.`rank_position` AS `rank_position`,case when `ranked`.`total_flag_count` = 0 then 'Unscored' when `ranked`.`score_final` >= 5 then 'Top Progressive' when `ranked`.`score_final` >= 2 then 'Strong' when `ranked`.`score_final` > -2 then 'Mixed Record' when `ranked`.`score_final` > -5 then 'Concerning' else 'Primary This Candidate' end AS `score_tier`,case when `ranked`.`total_flag_count` = 0 then 'tier-unscored' when `ranked`.`score_final` >= 5 then 'tier-top' when `ranked`.`score_final` >= 2 then 'tier-strong' when `ranked`.`score_final` > -2 then 'tier-mixed' when `ranked`.`score_final` > -5 then 'tier-concerning' else 'tier-primary' end AS `badge_class` from (select `v`.`candidate_id` AS `candidate_id`,`v`.`full_name` AS `full_name`,`v`.`green_flag_count` AS `green_flag_count`,`v`.`red_flag_count` AS `red_flag_count`,`v`.`total_flag_count` AS `total_flag_count`,`v`.`score_total` AS `score_total`,`v`.`score_normalized` AS `score_normalized`,`v`.`score_hybrid` AS `score_hybrid`,`v`.`weighted_green_score` AS `weighted_green_score`,`v`.`weighted_red_score` AS `weighted_red_score`,`v`.`weighted_score_total` AS `weighted_score_total`,`v`.`score_final` AS `score_final`,row_number() over ( order by `v`.`score_final` desc,`v`.`total_flag_count` desc,`v`.`green_flag_count` desc,`v`.`candidate_id`) AS `rank_position` from `vw_candidate_scores_final` `v`) `ranked` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_scores`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`cserraco_master`@`24.16.58.27` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_candidate_scores` AS select `c`.`candidate_id` AS `candidate_id`,`c`.`full_name` AS `full_name`,count(distinct case when `f`.`flag_color` = 'green' then `cf`.`flag_id` end) AS `green_flag_count`,count(distinct case when `f`.`flag_color` = 'red' then `cf`.`flag_id` end) AS `red_flag_count`,count(distinct case when `f`.`flag_color` = 'green' then `cf`.`flag_id` end) * 3 - count(distinct case when `f`.`flag_color` = 'red' then `cf`.`flag_id` end) * 3 AS `score_total` from ((`candidates` `c` left join `candidate_flags` `cf` on(`cf`.`candidate_id` = `c`.`candidate_id`)) left join `flags` `f` on(`f`.`flag_id` = `cf`.`flag_id`)) group by `c`.`candidate_id`,`c`.`full_name` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_scores_final`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`cserraco_master`@`24.16.58.27` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_candidate_scores_final` AS select `h`.`candidate_id` AS `candidate_id`,`h`.`full_name` AS `full_name`,`h`.`green_flag_count` AS `green_flag_count`,`h`.`red_flag_count` AS `red_flag_count`,`h`.`total_flag_count` AS `total_flag_count`,`h`.`score_total` AS `score_total`,`h`.`score_normalized` AS `score_normalized`,`h`.`score_hybrid` AS `score_hybrid`,`w`.`weighted_green_score` AS `weighted_green_score`,`w`.`weighted_red_score` AS `weighted_red_score`,`w`.`weighted_score_total` AS `weighted_score_total`,case when `h`.`total_flag_count` = 0 then 0 else sign(`w`.`weighted_score_total`) * abs(`h`.`score_hybrid`) * abs(`w`.`weighted_score_total` / `h`.`total_flag_count`) end AS `score_final` from (`vw_candidate_scores_hybrid` `h` join `vw_candidate_scores_weighted` `w` on(`w`.`candidate_id` = `h`.`candidate_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_scores_hybrid`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`cserraco_master`@`24.16.58.27` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_candidate_scores_hybrid` AS select `s`.`candidate_id` AS `candidate_id`,`s`.`full_name` AS `full_name`,`s`.`green_flag_count` AS `green_flag_count`,`s`.`red_flag_count` AS `red_flag_count`,`s`.`total_flag_count` AS `total_flag_count`,`s`.`score_total` AS `score_total`,`s`.`score_normalized` AS `score_normalized`,case when `s`.`total_flag_count` = 0 then 0 else `s`.`score_normalized` * log(1 + `s`.`total_flag_count`) end AS `score_hybrid` from `vw_candidate_scores_normalized` `s` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_scores_normalized`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`cserraco_master`@`24.16.58.27` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_candidate_scores_normalized` AS select `c`.`candidate_id` AS `candidate_id`,`c`.`full_name` AS `full_name`,count(distinct case when `f`.`flag_color` = 'green' then `cf`.`flag_id` end) AS `green_flag_count`,count(distinct case when `f`.`flag_color` = 'red' then `cf`.`flag_id` end) AS `red_flag_count`,count(distinct `cf`.`flag_id`) AS `total_flag_count`,count(distinct case when `f`.`flag_color` = 'green' then `cf`.`flag_id` end) * 3 - count(distinct case when `f`.`flag_color` = 'red' then `cf`.`flag_id` end) * 3 AS `score_total`,case when count(distinct `cf`.`flag_id`) = 0 then 0 else (count(distinct case when `f`.`flag_color` = 'green' then `cf`.`flag_id` end) * 3 - count(distinct case when `f`.`flag_color` = 'red' then `cf`.`flag_id` end) * 3) / count(distinct `cf`.`flag_id`) end AS `score_normalized` from ((`candidates` `c` left join `candidate_flags` `cf` on(`cf`.`candidate_id` = `c`.`candidate_id`)) left join `flags` `f` on(`f`.`flag_id` = `cf`.`flag_id`)) group by `c`.`candidate_id`,`c`.`full_name` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_scores_weighted`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`cserraco_master`@`24.16.58.27` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_candidate_scores_weighted` AS select `c`.`candidate_id` AS `candidate_id`,`c`.`full_name` AS `full_name`,sum(case when `f`.`flag_color` = 'green' then coalesce(`cfs`.`confidence_score`,3) / 3 else 0 end) AS `weighted_green_score`,sum(case when `f`.`flag_color` = 'red' then coalesce(`cfs`.`confidence_score`,3) / 3 else 0 end) AS `weighted_red_score`,count(distinct `cf`.`flag_id`) AS `total_flag_count`,sum(case when `f`.`flag_color` = 'green' then coalesce(`cfs`.`confidence_score`,3) / 3 else 0 end) - sum(case when `f`.`flag_color` = 'red' then coalesce(`cfs`.`confidence_score`,3) / 3 else 0 end) AS `weighted_score_total` from (((`candidates` `c` left join `candidate_flags` `cf` on(`cf`.`candidate_id` = `c`.`candidate_id`)) left join `flags` `f` on(`f`.`flag_id` = `cf`.`flag_id`)) left join `candidate_flag_sources` `cfs` on(`cfs`.`candidate_flag_id` = `cf`.`candidate_flag_id`)) group by `c`.`candidate_id`,`c`.`full_name` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!50001 DROP VIEW IF EXISTS `vw_candidate_source_refresh_queue`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`cserraco_master`@`24.16.58.27` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_candidate_source_refresh_queue` AS select `cs`.`source_id` AS `source_id`,`cs`.`candidate_id` AS `candidate_id`,`c`.`full_name` AS `full_name`,`cs`.`source_type` AS `source_type`,`cs`.`source_priority` AS `source_priority`,`cs`.`supports_field` AS `supports_field`,`cs`.`source_name` AS `source_name`,`cs`.`source_title` AS `source_title`,`cs`.`source_url` AS `source_url`,`cs`.`last_checked_at` AS `last_checked_at`,timestampdiff(DAY,`cs`.`last_checked_at`,current_timestamp()) AS `days_since_checked` from (`candidate_sources` `cs` join `candidates` `c` on(`c`.`candidate_id` = `cs`.`candidate_id`)) where timestampdiff(DAY,`cs`.`last_checked_at`,current_timestamp()) >= case when `cs`.`source_priority` = 1 then 30 when `cs`.`source_priority` = 2 then 60 when `cs`.`source_priority` = 3 then 120 when `cs`.`source_priority` = 4 then 180 end */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
